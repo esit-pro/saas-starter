@@ -1,6 +1,16 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { 
+  activityLogs, 
+  teamMembers, 
+  teams, 
+  users, 
+  clients, 
+  serviceTickets, 
+  ticketComments, 
+  timeEntries, 
+  expenses 
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -126,4 +136,439 @@ export async function getTeamForUser(userId: number) {
   });
 
   return result?.teamMembers[0]?.team || null;
+}
+
+// Client queries
+
+export async function getClients(teamId: number) {
+  return await db
+    .select()
+    .from(clients)
+    .where(eq(clients.teamId, teamId))
+    .orderBy(clients.name);
+}
+
+export async function getClient(clientId: number) {
+  return await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1)
+    .then(result => result[0] || null);
+}
+
+export async function createClient(clientData: Omit<typeof clients.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
+  return await db
+    .insert(clients)
+    .values({
+      ...clientData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+}
+
+export async function updateClient(clientId: number, clientData: Partial<Omit<typeof clients.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>>) {
+  return await db
+    .update(clients)
+    .set({
+      ...clientData,
+      updatedAt: new Date(),
+    })
+    .where(eq(clients.id, clientId))
+    .returning();
+}
+
+// Service ticket queries
+
+export async function getServiceTickets(teamId: number, filters?: {
+  clientId?: number;
+  status?: string;
+  assignedTo?: number;
+}) {
+  let query = db
+    .select({
+      ticket: serviceTickets,
+      client: clients,
+      assignedUser: users,
+    })
+    .from(serviceTickets)
+    .leftJoin(clients, eq(serviceTickets.clientId, clients.id))
+    .leftJoin(users, eq(serviceTickets.assignedTo, users.id))
+    .where(eq(serviceTickets.teamId, teamId));
+
+  if (filters?.clientId) {
+    query = query.where(eq(serviceTickets.clientId, filters.clientId));
+  }
+
+  if (filters?.status) {
+    query = query.where(eq(serviceTickets.status, filters.status));
+  }
+
+  if (filters?.assignedTo) {
+    query = query.where(eq(serviceTickets.assignedTo, filters.assignedTo));
+  }
+
+  return await query.orderBy(desc(serviceTickets.createdAt));
+}
+
+export async function getServiceTicket(ticketId: number) {
+  return await db.query.serviceTickets.findFirst({
+    where: eq(serviceTickets.id, ticketId),
+    with: {
+      client: true,
+      assignedUser: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      createdByUser: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      comments: {
+        with: {
+          user: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: desc(ticketComments.createdAt),
+      },
+    },
+  });
+}
+
+export async function createServiceTicket(ticketData: Omit<typeof serviceTickets.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'closedAt'>) {
+  return await db
+    .insert(serviceTickets)
+    .values({
+      ...ticketData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+}
+
+export async function updateServiceTicket(
+  ticketId: number, 
+  ticketData: Partial<Omit<typeof serviceTickets.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'closedAt'>>
+) {
+  const updates = { ...ticketData, updatedAt: new Date() };
+  
+  // If status is being changed to closed, set closedAt timestamp
+  if (ticketData.status === 'closed') {
+    updates.closedAt = new Date();
+  }
+  
+  return await db
+    .update(serviceTickets)
+    .set(updates)
+    .where(eq(serviceTickets.id, ticketId))
+    .returning();
+}
+
+// Comment queries
+
+export async function getTicketComments(ticketId: number) {
+  return await db.query.ticketComments.findMany({
+    where: eq(ticketComments.ticketId, ticketId),
+    with: {
+      user: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: desc(ticketComments.createdAt),
+  });
+}
+
+export async function createTicketComment(commentData: Omit<typeof ticketComments.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
+  return await db
+    .insert(ticketComments)
+    .values({
+      ...commentData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+}
+
+// Time tracking queries
+
+export async function getTimeEntries(filters: {
+  teamId?: number;
+  userId?: number;
+  clientId?: number;
+  ticketId?: number;
+  startDate?: Date;
+  endDate?: Date;
+  billable?: boolean;
+  billed?: boolean;
+}) {
+  let query = db
+    .select({
+      timeEntry: timeEntries,
+      client: clients,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+      ticket: {
+        id: serviceTickets.id,
+        title: serviceTickets.title,
+      },
+    })
+    .from(timeEntries)
+    .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+    .leftJoin(users, eq(timeEntries.userId, users.id))
+    .leftJoin(serviceTickets, eq(timeEntries.ticketId, serviceTickets.id));
+
+  // Apply filters
+  if (filters.teamId) {
+    query = query.where(eq(clients.teamId, filters.teamId));
+  }
+  if (filters.userId) {
+    query = query.where(eq(timeEntries.userId, filters.userId));
+  }
+  if (filters.clientId) {
+    query = query.where(eq(timeEntries.clientId, filters.clientId));
+  }
+  if (filters.ticketId) {
+    query = query.where(eq(timeEntries.ticketId, filters.ticketId));
+  }
+  if (filters.startDate) {
+    query = query.where(sql`${timeEntries.startTime} >= ${filters.startDate}`);
+  }
+  if (filters.endDate) {
+    query = query.where(sql`${timeEntries.startTime} <= ${filters.endDate}`);
+  }
+  if (filters.billable !== undefined) {
+    query = query.where(eq(timeEntries.billable, filters.billable));
+  }
+  if (filters.billed !== undefined) {
+    query = query.where(eq(timeEntries.billed, filters.billed));
+  }
+
+  return await query.orderBy(desc(timeEntries.startTime));
+}
+
+export async function createTimeEntry(timeEntryData: Omit<typeof timeEntries.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
+  return await db
+    .insert(timeEntries)
+    .values({
+      ...timeEntryData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+}
+
+export async function updateTimeEntry(
+  timeEntryId: number,
+  timeEntryData: Partial<Omit<typeof timeEntries.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>>
+) {
+  return await db
+    .update(timeEntries)
+    .set({
+      ...timeEntryData,
+      updatedAt: new Date(),
+    })
+    .where(eq(timeEntries.id, timeEntryId))
+    .returning();
+}
+
+// Expense queries
+
+export async function getExpenses(filters: {
+  teamId?: number;
+  userId?: number;
+  clientId?: number;
+  ticketId?: number;
+  startDate?: Date;
+  endDate?: Date;
+  billable?: boolean;
+  billed?: boolean;
+  category?: string;
+}) {
+  let query = db
+    .select({
+      expense: expenses,
+      client: clients,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+      ticket: {
+        id: serviceTickets.id,
+        title: serviceTickets.title,
+      },
+    })
+    .from(expenses)
+    .leftJoin(clients, eq(expenses.clientId, clients.id))
+    .leftJoin(users, eq(expenses.userId, users.id))
+    .leftJoin(serviceTickets, eq(expenses.ticketId, serviceTickets.id));
+
+  // Apply filters
+  if (filters.teamId) {
+    query = query.where(eq(clients.teamId, filters.teamId));
+  }
+  if (filters.userId) {
+    query = query.where(eq(expenses.userId, filters.userId));
+  }
+  if (filters.clientId) {
+    query = query.where(eq(expenses.clientId, filters.clientId));
+  }
+  if (filters.ticketId) {
+    query = query.where(eq(expenses.ticketId, filters.ticketId));
+  }
+  if (filters.startDate) {
+    query = query.where(sql`${expenses.date} >= ${filters.startDate}`);
+  }
+  if (filters.endDate) {
+    query = query.where(sql`${expenses.date} <= ${filters.endDate}`);
+  }
+  if (filters.billable !== undefined) {
+    query = query.where(eq(expenses.billable, filters.billable));
+  }
+  if (filters.billed !== undefined) {
+    query = query.where(eq(expenses.billed, filters.billed));
+  }
+  if (filters.category) {
+    query = query.where(eq(expenses.category, filters.category));
+  }
+
+  return await query.orderBy(desc(expenses.date));
+}
+
+export async function createExpense(expenseData: Omit<typeof expenses.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
+  return await db
+    .insert(expenses)
+    .values({
+      ...expenseData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+}
+
+export async function updateExpense(
+  expenseId: number,
+  expenseData: Partial<Omit<typeof expenses.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>>
+) {
+  return await db
+    .update(expenses)
+    .set({
+      ...expenseData,
+      updatedAt: new Date(),
+    })
+    .where(eq(expenses.id, expenseId))
+    .returning();
+}
+
+// Dashboard & reporting queries
+
+export async function getClientSummary(teamId: number) {
+  const clientCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(clients)
+    .where(eq(clients.teamId, teamId))
+    .then(result => result[0].count);
+
+  const activeTicketsCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(serviceTickets)
+    .where(and(
+      eq(serviceTickets.teamId, teamId),
+      sql`${serviceTickets.status} != 'closed'`
+    ))
+    .then(result => result[0].count);
+
+  return { clientCount, activeTicketsCount };
+}
+
+export async function getTimeTrackingSummary(teamId: number, period: { startDate: Date, endDate: Date }) {
+  const result = await db
+    .select({
+      totalHours: sql<number>`sum(${timeEntries.duration}) / 60.0`,
+      billableHours: sql<number>`sum(case when ${timeEntries.billable} = true then ${timeEntries.duration} else 0 end) / 60.0`,
+      billedHours: sql<number>`sum(case when ${timeEntries.billed} = true then ${timeEntries.duration} else 0 end) / 60.0`,
+    })
+    .from(timeEntries)
+    .innerJoin(clients, eq(timeEntries.clientId, clients.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      sql`${timeEntries.startTime} >= ${period.startDate}`,
+      sql`${timeEntries.startTime} <= ${period.endDate}`
+    ));
+
+  return result[0];
+}
+
+export async function getExpenseSummary(teamId: number, period: { startDate: Date, endDate: Date }) {
+  const result = await db
+    .select({
+      totalExpenses: sql<number>`sum(${expenses.amount})`,
+      billableExpenses: sql<number>`sum(case when ${expenses.billable} = true then ${expenses.amount} else 0 end)`,
+      billedExpenses: sql<number>`sum(case when ${expenses.billed} = true then ${expenses.amount} else 0 end)`,
+    })
+    .from(expenses)
+    .innerJoin(clients, eq(expenses.clientId, clients.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      sql`${expenses.date} >= ${period.startDate}`,
+      sql`${expenses.date} <= ${period.endDate}`
+    ));
+
+  return result[0];
+}
+
+export async function getTimeByClient(teamId: number, period: { startDate: Date, endDate: Date }) {
+  return await db
+    .select({
+      clientId: clients.id,
+      clientName: clients.name,
+      hours: sql<number>`sum(${timeEntries.duration}) / 60.0`,
+    })
+    .from(timeEntries)
+    .innerJoin(clients, eq(timeEntries.clientId, clients.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      sql`${timeEntries.startTime} >= ${period.startDate}`,
+      sql`${timeEntries.startTime} <= ${period.endDate}`
+    ))
+    .groupBy(clients.id, clients.name)
+    .orderBy(desc(sql<number>`sum(${timeEntries.duration})`));
+}
+
+export async function getTimeByUser(teamId: number, period: { startDate: Date, endDate: Date }) {
+  return await db
+    .select({
+      userId: users.id,
+      userName: users.name,
+      hours: sql<number>`sum(${timeEntries.duration}) / 60.0`,
+    })
+    .from(timeEntries)
+    .innerJoin(clients, eq(timeEntries.clientId, clients.id))
+    .innerJoin(users, eq(timeEntries.userId, users.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      sql`${timeEntries.startTime} >= ${period.startDate}`,
+      sql`${timeEntries.startTime} <= ${period.endDate}`
+    ))
+    .groupBy(users.id, users.name)
+    .orderBy(desc(sql<number>`sum(${timeEntries.duration})`));
 }

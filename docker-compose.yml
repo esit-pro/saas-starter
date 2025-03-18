@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: next_saas_starter_postgres
+    environment:
+      POSTGRES_DB: esit_service_db
+      POSTGRES_USER: esitdev
+      POSTGRES_PASSWORD: 21c2692af7b8b48f33bb3ba6c4b1ea8a
+    ports:
+      - "54322:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
