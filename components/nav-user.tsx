@@ -61,7 +61,7 @@ export function NavUser() {
 
   if (!user) {
     return (
-      <div className="p-4 rounded-lg border border-border bg-card/50">
+      <div className="p-4 rounded-lg border-0 bg-card/50 shadow-sm">
         <div className="flex items-center">
           <Avatar className="h-9 w-9 rounded-md">
             <AvatarFallback>...</AvatarFallback>
@@ -83,7 +83,10 @@ export function NavUser() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full flex items-center justify-start h-auto p-4 rounded-lg hover:bg-secondary/50">
+        <Button 
+          variant="ghost" 
+          className="w-full flex items-center justify-start h-auto p-4 rounded-lg hover:bg-secondary/50 shadow-sm bg-card/50 border-0"
+        >
           <Avatar className="h-9 w-9 rounded-md">
             <AvatarImage src={avatar} alt={user.name || user.email} />
             <AvatarFallback className="rounded-md">{initials}</AvatarFallback>

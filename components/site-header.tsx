@@ -19,7 +19,7 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ user }: SiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-10 h-16 shrink-0 bg-background/95 backdrop-blur-sm border-b border-border transition-all ease-linear">
+    <header className="sticky top-0 z-10 h-16 shrink-0 bg-background/95 backdrop-blur-sm transition-all ease-linear">
       <div className="flex h-full w-full items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-medium text-foreground">Dashboard</h1>

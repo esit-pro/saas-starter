@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           "rounded-xl shadow-sm",
-          variant === "default" && "border border-border bg-card text-card-foreground",
+          variant === "default" && "border border-border bg-card text-card-foreground dark:bg-primary/5",
           variant === "soft" && "bg-secondary/50 text-foreground border border-border/30",
           variant === "outline" && "border border-border bg-transparent text-foreground",
           className

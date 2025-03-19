@@ -104,7 +104,7 @@ export function ModernSidebar() {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-72 border-r border-border bg-background transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-72 lg:mr-1 lg:mt-1 lg:h-[calc(100vh-0.5rem)] lg:rounded-l-lg shadow-lg shadow-black/5 dark:shadow-black/10",
+          "fixed inset-y-0 left-0 z-30 w-64 border-r border-border bg-background transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-64 lg:mr-1 lg:mt-1 lg:h-[calc(100vh-0.5rem)] lg:rounded-l-lg shadow-lg shadow-black/5 dark:shadow-black/10",
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -238,9 +238,9 @@ export function ModernSidebar() {
                     <Progress value={80} className="h-1.5" />
                   </div>
                   <Button
-                    variant="outline"
+                    variant="card"
                     size="sm"
-                    className="mt-3 text-xs w-full text-primary dark:text-primary-foreground"
+                    className="mt-3 text-xs w-full"
                   >
                     Upgrade plan
                   </Button>

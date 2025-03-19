@@ -18,11 +18,29 @@
 - **TypeScript**: Strict mode enabled; prefer explicit types over `any`; avoid type assertions
 - **React Components**: Functional components with TypeScript interfaces for props; use React Server Components where possible
 - **Naming**: PascalCase for components, camelCase for functions/variables, kebab-case for files
-- **CSS**: Tailwind CSS with shadcn/ui component library and class-variance-authority for variants
+- **CSS**: Tailwind CSS v4 with shadcn/ui component library and class-variance-authority for variants
 - **State Management**: Server components for data fetching; use React hooks for client-side state
 - **DB Access**: Use Drizzle ORM with strong typing and prepared queries; add new models to schema.ts
 - **Error Handling**: Prefer early returns with descriptive error messages; use try/catch for async operations
 - **Authentication**: JWT stored in cookies via the auth system; use auth middleware for protected routes
 
+## UI Component System
+- **Card Components**: Cards use consistent styling with variants (default, soft, outline)
+  - Cards in dark mode use `bg-primary/5` background color for consistent theme
+  - StatCard icon containers use `dark:bg-primary/5 dark:text-primary` in dark mode
+- **Theme System**: Light and dark mode with CSS variables defined in globals.css
+  - Global CSS variables follow the pattern `--color-name: hsl(var(--name))` or `--color-name: var(--name)`
+  - Dark mode class toggles variable values for consistent theming
+- **Component Design**: Components use Radix UI primitives customized with Tailwind
+  - Form controls, dialogs, and interactive elements follow shadcn/ui principles
+
 ## Tech Stack
-- Next.js 15, TypeScript, Tailwind CSS, Postgres, Drizzle ORM, shadcn/ui, Stripe
+- Next.js 15 with Turbopack
+- React 19
+- TypeScript 5.8+
+- Tailwind CSS 4.0
+- Postgres with Drizzle ORM
+- shadcn/ui component library
+- Radix UI primitives
+- Lucide React icons
+- Stripe for payment processing
