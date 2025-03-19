@@ -220,7 +220,7 @@ export default async function Dashboard() {
           <CardContent className="flex-grow">
             <div className="h-full">
               <div className="grid grid-cols-1 gap-4 h-full">
-                <div className="bg-primary/5 p-4 rounded-lg h-full flex flex-col">
+                <div className="bg-transparent p-4 rounded-lg h-full flex flex-col">
                   <div className="flex items-baseline justify-between mb-2">
                     <h3 className="text-sm font-medium text-foreground">Monthly Revenue</h3>
                     <span className="text-sm text-muted-foreground">This Year</span>

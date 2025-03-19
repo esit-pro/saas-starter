@@ -49,13 +49,16 @@ export function SiteHeader({ user }: SiteHeaderProps) {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-border hover:border-primary/30 transition-colors">
-                  <Avatar className="h-full w-full">
+                <Button 
+                  variant="ghost" 
+                  className="items-center pl-2 pr-3 py-1.5 h-auto rounded-lg hover:bg-secondary/50 text-left"
+                >
+                  <Avatar className="h-8 w-8 rounded-md">
                     <AvatarImage 
                       src={`https://ui-avatars.com/api/?name=${user.name || user.email}&background=random`} 
                       alt={user.name || user.email}
                     />
-                    <AvatarFallback>
+                    <AvatarFallback className="rounded-md">
                       {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

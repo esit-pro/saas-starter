@@ -65,9 +65,9 @@ const managementItems = [
 ];
 
 const workspaceItems = [
-  { title: "IT Support", color: "bg-primary-foreground dark:bg-primary" },
-  { title: "Development", color: "bg-secondary" },
-  { title: "Marketing", color: "bg-accent" },
+  { title: "IT Support", color: "bg-blue-500 dark:bg-blue-600" },
+  { title: "Development", color: "bg-purple-500 dark:bg-purple-600" },
+  { title: "Marketing", color: "bg-orange-500 dark:bg-orange-600" },
 ];
 
 export function ModernSidebar() {
