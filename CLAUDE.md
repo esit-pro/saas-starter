@@ -38,6 +38,8 @@
 
 ## Layout Patterns
 - **Dashboard Layout**: Responsive dashboard with modern sidebar navigation
+  - Main sidebar includes all navigation including settings links
+  - All dashboard pages use consistent full-width layout with same heading styles
   - Workspaces use bright, high-contrast color indicators (`bg-blue-500`, `bg-purple-500`, etc.)
   - User avatar in header matches sidebar account styling for consistency
 - **Authentication Pages**: Two-column layout for authentication screens
