@@ -14,6 +14,17 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Only show this sidebar on the /dashboard page (not on /dashboard/clients, /dashboard/tickets, etc.)
+  const shouldShowSettingsSidebar = pathname === '/dashboard' || 
+                                   pathname === '/dashboard/general' || 
+                                   pathname === '/dashboard/activity' || 
+                                   pathname === '/dashboard/security';
+
+  // If we're not on a settings page, just render the children without the settings sidebar
+  if (!shouldShowSettingsSidebar) {
+    return <>{children}</>;
+  }
+
   const navItems = [
     { href: '/dashboard', icon: Users, label: 'Team' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },

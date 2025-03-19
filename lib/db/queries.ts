@@ -186,7 +186,21 @@ export async function getServiceTickets(teamId: number, filters?: {
   status?: string;
   assignedTo?: number;
 }) {
-  let query = db
+  let conditions = [eq(serviceTickets.teamId, teamId)];
+  
+  if (filters?.clientId) {
+    conditions.push(eq(serviceTickets.clientId, filters.clientId));
+  }
+
+  if (filters?.status) {
+    conditions.push(eq(serviceTickets.status, filters.status));
+  }
+
+  if (filters?.assignedTo) {
+    conditions.push(eq(serviceTickets.assignedTo, filters.assignedTo));
+  }
+
+  return await db
     .select({
       ticket: serviceTickets,
       client: clients,
@@ -195,21 +209,8 @@ export async function getServiceTickets(teamId: number, filters?: {
     .from(serviceTickets)
     .leftJoin(clients, eq(serviceTickets.clientId, clients.id))
     .leftJoin(users, eq(serviceTickets.assignedTo, users.id))
-    .where(eq(serviceTickets.teamId, teamId));
-
-  if (filters?.clientId) {
-    query = query.where(eq(serviceTickets.clientId, filters.clientId));
-  }
-
-  if (filters?.status) {
-    query = query.where(eq(serviceTickets.status, filters.status));
-  }
-
-  if (filters?.assignedTo) {
-    query = query.where(eq(serviceTickets.assignedTo, filters.assignedTo));
-  }
-
-  return await query.orderBy(desc(serviceTickets.createdAt));
+    .where(and(...conditions))
+    .orderBy(desc(serviceTickets.createdAt));
 }
 
 export async function getServiceTicket(ticketId: number) {
@@ -262,7 +263,7 @@ export async function updateServiceTicket(
   ticketId: number, 
   ticketData: Partial<Omit<typeof serviceTickets.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'closedAt'>>
 ) {
-  const updates = { ...ticketData, updatedAt: new Date() };
+  const updates: any = { ...ticketData, updatedAt: new Date() };
   
   // If status is being changed to closed, set closedAt timestamp
   if (ticketData.status === 'closed') {
@@ -317,7 +318,37 @@ export async function getTimeEntries(filters: {
   billable?: boolean;
   billed?: boolean;
 }) {
-  let query = db
+  let conditions = [];
+  
+  // Apply filters
+  if (filters.teamId) {
+    conditions.push(eq(clients.teamId, filters.teamId));
+  }
+  if (filters.userId) {
+    conditions.push(eq(timeEntries.userId, filters.userId));
+  }
+  if (filters.clientId) {
+    conditions.push(eq(timeEntries.clientId, filters.clientId));
+  }
+  if (filters.ticketId) {
+    conditions.push(eq(timeEntries.ticketId, filters.ticketId));
+  }
+  if (filters.startDate) {
+    conditions.push(sql`${timeEntries.startTime} >= ${filters.startDate}`);
+  }
+  if (filters.endDate) {
+    conditions.push(sql`${timeEntries.startTime} <= ${filters.endDate}`);
+  }
+  if (filters.billable !== undefined) {
+    conditions.push(eq(timeEntries.billable, filters.billable));
+  }
+  if (filters.billed !== undefined) {
+    conditions.push(eq(timeEntries.billed, filters.billed));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  return await db
     .select({
       timeEntry: timeEntries,
       client: clients,
@@ -334,35 +365,9 @@ export async function getTimeEntries(filters: {
     .from(timeEntries)
     .leftJoin(clients, eq(timeEntries.clientId, clients.id))
     .leftJoin(users, eq(timeEntries.userId, users.id))
-    .leftJoin(serviceTickets, eq(timeEntries.ticketId, serviceTickets.id));
-
-  // Apply filters
-  if (filters.teamId) {
-    query = query.where(eq(clients.teamId, filters.teamId));
-  }
-  if (filters.userId) {
-    query = query.where(eq(timeEntries.userId, filters.userId));
-  }
-  if (filters.clientId) {
-    query = query.where(eq(timeEntries.clientId, filters.clientId));
-  }
-  if (filters.ticketId) {
-    query = query.where(eq(timeEntries.ticketId, filters.ticketId));
-  }
-  if (filters.startDate) {
-    query = query.where(sql`${timeEntries.startTime} >= ${filters.startDate}`);
-  }
-  if (filters.endDate) {
-    query = query.where(sql`${timeEntries.startTime} <= ${filters.endDate}`);
-  }
-  if (filters.billable !== undefined) {
-    query = query.where(eq(timeEntries.billable, filters.billable));
-  }
-  if (filters.billed !== undefined) {
-    query = query.where(eq(timeEntries.billed, filters.billed));
-  }
-
-  return await query.orderBy(desc(timeEntries.startTime));
+    .leftJoin(serviceTickets, eq(timeEntries.ticketId, serviceTickets.id))
+    .where(whereClause ? whereClause : sql`1=1`)
+    .orderBy(desc(timeEntries.startTime));
 }
 
 export async function createTimeEntry(timeEntryData: Omit<typeof timeEntries.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -403,7 +408,40 @@ export async function getExpenses(filters: {
   billed?: boolean;
   category?: string;
 }) {
-  let query = db
+  let conditions = [];
+  
+  // Apply filters
+  if (filters.teamId) {
+    conditions.push(eq(clients.teamId, filters.teamId));
+  }
+  if (filters.userId) {
+    conditions.push(eq(expenses.userId, filters.userId));
+  }
+  if (filters.clientId) {
+    conditions.push(eq(expenses.clientId, filters.clientId));
+  }
+  if (filters.ticketId) {
+    conditions.push(eq(expenses.ticketId, filters.ticketId));
+  }
+  if (filters.startDate) {
+    conditions.push(sql`${expenses.date} >= ${filters.startDate}`);
+  }
+  if (filters.endDate) {
+    conditions.push(sql`${expenses.date} <= ${filters.endDate}`);
+  }
+  if (filters.billable !== undefined) {
+    conditions.push(eq(expenses.billable, filters.billable));
+  }
+  if (filters.billed !== undefined) {
+    conditions.push(eq(expenses.billed, filters.billed));
+  }
+  if (filters.category) {
+    conditions.push(eq(expenses.category, filters.category));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  return await db
     .select({
       expense: expenses,
       client: clients,
@@ -420,38 +458,9 @@ export async function getExpenses(filters: {
     .from(expenses)
     .leftJoin(clients, eq(expenses.clientId, clients.id))
     .leftJoin(users, eq(expenses.userId, users.id))
-    .leftJoin(serviceTickets, eq(expenses.ticketId, serviceTickets.id));
-
-  // Apply filters
-  if (filters.teamId) {
-    query = query.where(eq(clients.teamId, filters.teamId));
-  }
-  if (filters.userId) {
-    query = query.where(eq(expenses.userId, filters.userId));
-  }
-  if (filters.clientId) {
-    query = query.where(eq(expenses.clientId, filters.clientId));
-  }
-  if (filters.ticketId) {
-    query = query.where(eq(expenses.ticketId, filters.ticketId));
-  }
-  if (filters.startDate) {
-    query = query.where(sql`${expenses.date} >= ${filters.startDate}`);
-  }
-  if (filters.endDate) {
-    query = query.where(sql`${expenses.date} <= ${filters.endDate}`);
-  }
-  if (filters.billable !== undefined) {
-    query = query.where(eq(expenses.billable, filters.billable));
-  }
-  if (filters.billed !== undefined) {
-    query = query.where(eq(expenses.billed, filters.billed));
-  }
-  if (filters.category) {
-    query = query.where(eq(expenses.category, filters.category));
-  }
-
-  return await query.orderBy(desc(expenses.date));
+    .leftJoin(serviceTickets, eq(expenses.ticketId, serviceTickets.id))
+    .where(whereClause ? whereClause : sql`1=1`)
+    .orderBy(desc(expenses.date));
 }
 
 export async function createExpense(expenseData: Omit<typeof expenses.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {

@@ -2,19 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
-const protectedRoutes = '/dashboard';
+// Public routes that should not be redirected to sign-in
+const publicRoutes = ['/sign-in', '/sign-up', '/api'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
-  const isProtectedRoute = pathname.startsWith(protectedRoutes);
-
-  if (isProtectedRoute && !sessionCookie) {
+  
+  // Check if this is a public route that doesn't need authentication
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  
+  // If it's not a public route and there's no session cookie, redirect to sign-in
+  if (!isPublicRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
   let res = NextResponse.next();
 
+  // If there's a session cookie, verify and refresh it
   if (sessionCookie && request.method === "GET") {
     try {
       const parsed = await verifyToken(sessionCookie.value);
@@ -34,7 +39,7 @@ export async function middleware(request: NextRequest) {
     } catch (error) {
       console.error('Error updating session:', error);
       res.cookies.delete('session');
-      if (isProtectedRoute) {
+      if (!isPublicRoute) {
         return NextResponse.redirect(new URL('/sign-in', request.url));
       }
     }

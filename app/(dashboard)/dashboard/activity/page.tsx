@@ -9,6 +9,10 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  Building,
+  Ticket,
+  Clock,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -25,6 +29,13 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CLIENT_CREATED]: Building,
+  [ActivityType.CLIENT_UPDATED]: Building,
+  [ActivityType.TICKET_CREATED]: Ticket,
+  [ActivityType.TICKET_UPDATED]: Ticket,
+  [ActivityType.TICKET_CLOSED]: CheckCircle,
+  [ActivityType.TIME_ENTRY_CREATED]: Clock,
+  [ActivityType.EXPENSE_CREATED]: Receipt,
 };
 
 function getRelativeTime(date: Date) {
@@ -63,6 +74,20 @@ function formatAction(action: ActivityType): string {
       return 'You invited a team member';
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
+    case ActivityType.CLIENT_CREATED:
+      return 'You created a new client';
+    case ActivityType.CLIENT_UPDATED:
+      return 'You updated a client';
+    case ActivityType.TICKET_CREATED:
+      return 'You created a new ticket';
+    case ActivityType.TICKET_UPDATED:
+      return 'You updated a ticket';
+    case ActivityType.TICKET_CLOSED:
+      return 'You closed a ticket';
+    case ActivityType.TIME_ENTRY_CREATED:
+      return 'You created a time entry';
+    case ActivityType.EXPENSE_CREATED:
+      return 'You created an expense';
     default:
       return 'Unknown action occurred';
   }
