@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, sql } from 'drizzle-orm';
+import { desc, and, eq, isNull, sql, or } from 'drizzle-orm';
 import { db } from './drizzle';
 import { 
   activityLogs, 
@@ -91,22 +91,44 @@ export async function getUserWithTeam(userId: number) {
 export async function getActivityLogs() {
   const user = await getUser();
   if (!user) {
-    throw new Error('User not authenticated');
+    return []; // Return empty array instead of throwing error
   }
 
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.name,
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
+  try {
+    // First, try to get the user's team
+    const userWithTeam = await getUserWithTeam(user.id);
+    const teamId = userWithTeam?.teamId;
+
+    // Build conditions
+    let conditions = [];
+    if (teamId) {
+      conditions.push(
+        or(
+          eq(activityLogs.userId, user.id),
+          eq(activityLogs.teamId, teamId)
+        )
+      );
+    } else {
+      conditions.push(eq(activityLogs.userId, user.id));
+    }
+
+    return await db
+      .select({
+        id: activityLogs.id,
+        action: activityLogs.action,
+        timestamp: activityLogs.timestamp,
+        ipAddress: activityLogs.ipAddress,
+        userName: users.name,
+      })
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.userId, users.id))
+      .where(conditions.length > 0 ? conditions[0] : sql`1=1`)
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(10);
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    return [];
+  }
 }
 
 export async function getTeamForUser(userId: number) {

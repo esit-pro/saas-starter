@@ -1,6 +1,7 @@
 'use client';
 
-import { startTransition, use, useActionState } from 'react';
+import { startTransition, use, useOptimistic } from 'react';
+import { useFormState } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,10 +18,11 @@ type ActionState = {
 export default function GeneralPage() {
   const { userPromise } = useUser();
   const user = use(userPromise);
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
+  const [state, formAction] = useFormState<ActionState, FormData>(
     updateAccount,
     { error: '', success: '' }
   );
+  const [isPending, startFormTransition] = useOptimistic(false);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,8 +39,8 @@ export default function GeneralPage() {
   };
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">
         General Settings
       </h1>
 
@@ -92,6 +94,6 @@ export default function GeneralPage() {
           </form>
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 }

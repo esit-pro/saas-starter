@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Circle
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
@@ -70,10 +70,10 @@ const recentTickets = [
 ];
 
 const statusColors = {
-  'open': 'bg-blue-50 text-blue-700',
-  'in-progress': 'bg-amber-50 text-amber-700',
-  'completed': 'bg-green-50 text-green-700',
-  'closed': 'bg-gray-50 text-gray-700',
+  'open': 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  'in-progress': 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  'completed': 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300',
+  'closed': 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
 }
 
 const priorityIcons = {
@@ -110,7 +110,7 @@ export default async function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
@@ -120,7 +120,7 @@ export default async function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard 
           title="Total Clients" 
           value={clientsData.clientCount} 
@@ -154,125 +154,26 @@ export default async function Dashboard() {
         />
       </div>
 
-      {/* Split Layout for Desktop */}
-      <div className="hidden md:block">
-        <SplitView
-          left={
-            <Card className="h-full flex flex-col">
-              <CardHeader className="flex-none pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium">Recent Tickets</CardTitle>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/dashboard/tickets" className="text-sm font-medium text-gray-500 hover:text-gray-700">
-                      View all
-                      <ExternalLink className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-auto p-0">
-                <div className="px-6">
-                  <ul className="divide-y divide-gray-200">
-                    {recentTickets.map((ticket) => (
-                      <li key={ticket.id} className="py-4">
-                        <div className="flex items-start justify-between">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              {priorityIcons[ticket.priority as keyof typeof priorityIcons]}
-                              <Link 
-                                href={`/dashboard/tickets/${ticket.id}`}
-                                className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                              >
-                                {ticket.title}
-                              </Link>
-                            </div>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="text-sm text-gray-500">{ticket.client}</span>
-                              <span className="text-gray-300">•</span>
-                              <span className="text-sm text-gray-500">
-                                {formatDistanceToNow(ticket.created, { addSuffix: true })}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="ml-4 flex-shrink-0">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[ticket.status as keyof typeof statusColors]}`}>
-                              {ticket.status}
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          }
-          right={
-            <Card className="h-full">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium">Revenue Overview</CardTitle>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72 mt-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-baseline justify-between mb-4">
-                        <h3 className="text-sm font-medium text-gray-900">Monthly Revenue</h3>
-                        <span className="text-sm text-gray-500">This Year</span>
-                      </div>
-                      <div className="relative h-40">
-                        {/* Bar chart rendered here - using a mock for now */}
-                        <div className="flex items-end justify-between h-full px-2">
-                          {monthlyData.map((value, index) => (
-                            <div 
-                              key={index} 
-                              className="w-4 bg-blue-500 rounded-t relative group"
-                              style={{ height: `${(value / 15000) * 100}%` }}
-                            >
-                              <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                                {formatCurrency(value)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                          {monthlyLabels.map((label, index) => (
-                            <div key={index} className="text-center">{label}</div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          }
-        />
-      </div>
-
-      {/* Mobile View (Stacked) */}
-      <div className="md:hidden space-y-6">
-        <Card>
-          <CardHeader className="pb-2">
+      {/* Bottom widgets - stack on md screens as well */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Recent Tickets */}
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex-none pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium">Recent Tickets</CardTitle>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard/tickets" className="text-sm font-medium text-gray-500 hover:text-gray-700">
+                <Link href="/dashboard/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                   View all
                   <ExternalLink className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="flex-1 overflow-auto p-0">
             <div className="px-6">
-              <ul className="divide-y divide-gray-200">
-                {recentTickets.slice(0, 3).map((ticket) => (
+              <ul className="divide-y divide-border">
+                {/* Show fewer items on small screens */}
+                {(recentTickets.slice(0, recentTickets.length)).map((ticket) => (
                   <li key={ticket.id} className="py-4">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
@@ -280,15 +181,15 @@ export default async function Dashboard() {
                           {priorityIcons[ticket.priority as keyof typeof priorityIcons]}
                           <Link 
                             href={`/dashboard/tickets/${ticket.id}`}
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                            className="text-sm font-medium text-foreground hover:text-primary"
                           >
                             {ticket.title}
                           </Link>
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="text-sm text-gray-500">{ticket.client}</span>
-                          <span className="text-gray-300">•</span>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-muted-foreground">{ticket.client}</span>
+                          <span className="text-muted">•</span>
+                          <span className="text-sm text-muted-foreground">
                             {formatDistanceToNow(ticket.created, { addSuffix: true })}
                           </span>
                         </div>
@@ -306,8 +207,9 @@ export default async function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        {/* Revenue Overview */}
+        <Card className="flex flex-col min-h-[350px] lg:min-h-[400px]">
+          <CardHeader className="pb-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium">Revenue Overview</CardTitle>
               <Button variant="ghost" size="sm">
@@ -315,32 +217,32 @@ export default async function Dashboard() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-48 mt-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h3 className="text-sm font-medium text-gray-900">Monthly Revenue</h3>
-                    <span className="text-sm text-gray-500">This Year</span>
+          <CardContent className="flex-grow">
+            <div className="h-full">
+              <div className="grid grid-cols-1 gap-4 h-full">
+                <div className="bg-transparent p-4 rounded-lg h-full flex flex-col">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <h3 className="text-sm font-medium text-foreground">Monthly Revenue</h3>
+                    <span className="text-sm text-muted-foreground">This Year</span>
                   </div>
-                  <div className="relative h-32">
+                  <div className="relative flex-grow mb-4 min-h-[180px] lg:min-h-[250px]">
                     {/* Bar chart rendered here - using a mock for now */}
                     <div className="flex items-end justify-between h-full px-2">
-                      {monthlyData.slice(-6).map((value, index) => (
+                      {monthlyData.map((value, index) => (
                         <div 
                           key={index} 
-                          className="w-6 bg-blue-500 rounded-t relative group"
+                          className="w-6 lg:w-4 bg-primary rounded-t relative group"
                           style={{ height: `${(value / 15000) * 100}%` }}
                         >
-                          <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                          <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground border border-border text-xs rounded py-1 px-2 whitespace-nowrap shadow-md">
                             {formatCurrency(value)}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                      {monthlyLabels.slice(-6).map((label, index) => (
-                        <div key={index} className="text-center">{label}</div>
+                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                      {monthlyLabels.map((label, index) => (
+                        <div key={index} className="text-center truncate w-8 lg:w-6">{label}</div>
                       ))}
                     </div>
                   </div>

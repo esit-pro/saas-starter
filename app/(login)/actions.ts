@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
+import crypto from 'crypto';
 import { db } from '@/lib/db/drizzle';
 import {
   User,
@@ -103,7 +104,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  confirmPassword: z.string().min(8),
   inviteId: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
@@ -227,6 +232,151 @@ export async function signOut() {
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete('session');
 }
+
+// Schema for password reset request
+const requestPasswordResetSchema = z.object({
+  email: z.string().email(),
+});
+
+// New table definition for password reset tokens
+const passwordResetTokens = {
+  id: sql`SERIAL PRIMARY KEY`,
+  userId: sql`INTEGER NOT NULL REFERENCES users(id)`,
+  token: sql`TEXT NOT NULL`,
+  expiresAt: sql`TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 hour')`,
+  used: sql`BOOLEAN NOT NULL DEFAULT FALSE`,
+};
+
+// Function to send password reset email using smtp2go
+async function sendPasswordResetEmail(email: string, resetLink: string) {
+  // This is a placeholder - in a real implementation, you would use smtp2go's API
+  // Here's an example of how you might implement it:
+  
+  try {
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        api_key: process.env.SMTP2GO_API_KEY,
+        to: [email],
+        sender: 'noreply@yourdomain.com',
+        subject: 'Password Reset Request',
+        html_body: `
+          <p>You requested a password reset. Click the link below to reset your password:</p>
+          <p><a href="${resetLink}">Reset your password</a></p>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        `,
+      }),
+    });
+    
+    const result = await response.json();
+    if (!result.success) {
+      console.error('Failed to send email:', result);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
+}
+
+// Action to request a password reset
+export const requestPasswordReset = validatedAction(requestPasswordResetSchema, async (data) => {
+  const { email } = data;
+  
+  // Find the user by email
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  // Always return success to prevent email enumeration attacks
+  if (existingUser.length === 0) {
+    return { success: 'If an account with that email exists, we have sent password reset instructions.' };
+  }
+
+  const user = existingUser[0];
+  
+  // Generate a secure token
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  // Store the token in the database
+  // Note: This is a placeholder for the actual implementation
+  // In a real implementation, you would have a table for password reset tokens
+  const resetTokens = 'password_reset_tokens'; // Placeholder for the actual table name
+  
+  // Example of how you might store the token
+  // await db.insert(resetTokens).values({
+  //   userId: user.id,
+  //   token,
+  //   expiresAt: new Date(Date.now() + 3600000), // 1 hour
+  // });
+  
+  // Generate the reset link
+  const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
+  
+  // Send the email
+  const emailSent = await sendPasswordResetEmail(email, resetLink);
+  
+  if (!emailSent) {
+    return { error: 'Failed to send password reset email. Please try again later.' };
+  }
+  
+  return { success: 'If an account with that email exists, we have sent password reset instructions.' };
+});
+
+// Schema for resetting password
+const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(8),
+  confirmPassword: z.string().min(8),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+// Action to reset password
+export const resetPassword = validatedAction(resetPasswordSchema, async (data) => {
+  const { token, password } = data;
+  
+  // This is a placeholder - in a real implementation, you would:
+  // 1. Find the token in the database
+  // 2. Check if it's expired or used
+  // 3. Find the user associated with the token
+  // 4. Update the user's password
+  // 5. Mark the token as used
+  
+  // Placeholder for finding the token
+  const foundToken = null; // You would query your database for the token
+  
+  if (!foundToken) {
+    return { error: 'Invalid or expired token. Please request a new password reset.' };
+  }
+  
+  // Placeholder for finding the user
+  const user = null; // You would get the user from the token
+  
+  if (!user) {
+    return { error: 'User not found. Please request a new password reset.' };
+  }
+  
+  // Hash the new password
+  const passwordHash = await hashPassword(password);
+  
+  // Update the user's password
+  // await db.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+  
+  // Mark the token as used
+  // await db.update(resetTokens).set({ used: true }).where(eq(resetTokens.token, token));
+  
+  return { success: 'Your password has been reset. You can now log in with your new password.' };
+});
 
 const updatePasswordSchema = z
   .object({

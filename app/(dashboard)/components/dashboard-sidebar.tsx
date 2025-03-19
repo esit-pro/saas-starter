@@ -7,11 +7,8 @@ import {
   Home, 
   Users, 
   Ticket, 
-  Settings, 
-  BarChart, 
   Menu, 
-  X,
-  Shield
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -20,9 +17,6 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Clients', href: '/dashboard/clients', icon: Users },
   { name: 'Service Tickets', href: '/dashboard/tickets', icon: Ticket },
-  { name: 'Team Settings', href: '/dashboard', icon: Settings },
-  { name: 'Security', href: '/dashboard/security', icon: Shield },
-  { name: 'Activity', href: '/dashboard/activity', icon: BarChart },
 ];
 
 export function DashboardSidebar() {

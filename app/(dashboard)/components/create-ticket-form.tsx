@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClientCombobox } from './client-combobox';
-import { Card } from '@/components/ui/card';
+import { Card, CardAction } from '@/components/ui/card';
 
 type Client = {
   id: number;

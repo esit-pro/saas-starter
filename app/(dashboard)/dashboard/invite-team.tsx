@@ -12,7 +12,8 @@ import {
 import { Loader2, PlusCircle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { use, useActionState } from 'react';
+import { use, useOptimistic } from 'react';
+import { useFormState } from 'react-dom';
 import { inviteTeamMember } from '@/app/(login)/actions';
 import { useUser } from '@/lib/auth';
 
@@ -25,10 +26,11 @@ export function InviteTeamMember() {
   const { userPromise } = useUser();
   const user = use(userPromise);
   const isOwner = user?.role === 'owner';
-  const [inviteState, inviteAction, isInvitePending] = useActionState<
+  const [inviteState, inviteAction] = useFormState<
     ActionState,
     FormData
   >(inviteTeamMember, { error: '', success: '' });
+  const [isInvitePending, startInviteTransition] = useOptimistic(false);
 
   return (
     <Card>

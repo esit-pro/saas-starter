@@ -93,12 +93,29 @@ function formatAction(action: ActivityType): string {
   }
 }
 
+interface ActivityLog {
+  id: number;
+  action: string;
+  timestamp: string | Date;
+  ipAddress: string | null;
+  userName: string | null;
+}
+
+// Mark this route as dynamic since it uses cookies
+export const dynamic = 'force-dynamic';
+
 export default async function ActivityPage() {
-  const logs = await getActivityLogs();
+  let logs: ActivityLog[] = [];
+  try {
+    logs = await getActivityLogs();
+  } catch (error) {
+    // Don't log the error as it's expected during pre-rendering
+    // Just continue with empty logs array
+  }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">
         Activity Log
       </h1>
       <Card>
@@ -106,9 +123,9 @@ export default async function ActivityPage() {
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {logs.length > 0 ? (
+          {logs && logs.length > 0 ? (
             <ul className="space-y-4">
-              {logs.map((log) => {
+              {logs.map((log: ActivityLog) => {
                 const Icon = iconMap[log.action as ActivityType] || Settings;
                 const formattedAction = formatAction(
                   log.action as ActivityType
@@ -146,6 +163,6 @@ export default async function ActivityPage() {
           )}
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 }

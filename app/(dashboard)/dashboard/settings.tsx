@@ -25,8 +25,8 @@ export function Settings({ teamData }: { teamData: TeamDataWithMembers }) {
   };
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium mb-6">Team Settings</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">Team Settings</h1>
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Team Subscription</CardTitle>
@@ -107,6 +107,6 @@ export function Settings({ teamData }: { teamData: TeamDataWithMembers }) {
         </CardContent>
       </Card>
       <InviteTeamMember />
-    </section>
+    </div>
   );
 }
