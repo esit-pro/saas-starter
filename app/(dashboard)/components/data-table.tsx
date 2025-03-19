@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Card } from '@/components/ui/card';
+import { Card, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
 
 interface DataTableProps<TData, TValue> {

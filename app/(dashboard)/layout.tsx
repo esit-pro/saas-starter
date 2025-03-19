@@ -1,7 +1,7 @@
 import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
-import { DashboardSidebar } from './components/dashboard-sidebar';
-import { DashboardHeader } from './components/dashboard-header';
+import { SiteHeader } from '@/components/site-header';
+import { ModernSidebar } from '@/components/modern-sidebar';
 
 export default async function DashboardLayout({
   children,
@@ -15,11 +15,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <DashboardHeader user={user} />
-      <div className="flex flex-1 overflow-hidden">
-        <DashboardSidebar />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+    <div className="min-h-screen w-full bg-background text-foreground flex">
+      <ModernSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <SiteHeader user={user} />
+        <main className="flex-1 overflow-auto p-4 md:p-6 lg:rounded-tl-lg bg-background border-l border-t border-border lg:mt-1 lg:ml-1 shadow-md shadow-black/5 dark:shadow-black/10">
           {children}
         </main>
       </div>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardAction } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 
 type Comment = {

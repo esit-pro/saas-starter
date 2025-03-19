@@ -99,7 +99,20 @@ export async function getActivityLogs() {
     const userWithTeam = await getUserWithTeam(user.id);
     const teamId = userWithTeam?.teamId;
 
-    let query = db
+    // Build conditions
+    let conditions = [];
+    if (teamId) {
+      conditions.push(
+        or(
+          eq(activityLogs.userId, user.id),
+          eq(activityLogs.teamId, teamId)
+        )
+      );
+    } else {
+      conditions.push(eq(activityLogs.userId, user.id));
+    }
+
+    return await db
       .select({
         id: activityLogs.id,
         action: activityLogs.action,
@@ -108,21 +121,8 @@ export async function getActivityLogs() {
         userName: users.name,
       })
       .from(activityLogs)
-      .leftJoin(users, eq(activityLogs.userId, users.id));
-    
-    // If we have a team ID, filter by team and user, otherwise just by user
-    if (teamId) {
-      query = query.where(
-        or(
-          eq(activityLogs.userId, user.id),
-          eq(activityLogs.teamId, teamId)
-        )
-      );
-    } else {
-      query = query.where(eq(activityLogs.userId, user.id));
-    }
-    
-    return await query
+      .leftJoin(users, eq(activityLogs.userId, users.id))
+      .where(conditions.length > 0 ? conditions[0] : sql`1=1`)
       .orderBy(desc(activityLogs.timestamp))
       .limit(10);
   } catch (error) {

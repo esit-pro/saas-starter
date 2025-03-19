@@ -42,27 +42,27 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
+      title: "Clients",
+      url: "/dashboard/clients",
+      icon: IconUsers,
     },
     {
-      title: "Analytics",
-      url: "#",
+      title: "Activity",
+      url: "/dashboard/activity",
       icon: IconChartBar,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
+      title: "Tickets",
+      url: "/dashboard/tickets",
+      icon: IconListDetails,
     },
     {
       title: "Team",
-      url: "#",
+      url: "/dashboard/general",
       icon: IconUsers,
     },
   ],
@@ -117,12 +117,12 @@ const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/dashboard/security",
       icon: IconSettings,
     },
     {
       title: "Get Help",
-      url: "#",
+      url: "/dashboard/general",
       icon: IconHelp,
     },
     {
@@ -160,9 +160,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
+              <a href="/dashboard">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">ESIT</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -174,7 +174,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )

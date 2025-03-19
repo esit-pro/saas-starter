@@ -1,28 +1,94 @@
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { User as UserType } from "@/lib/db/schema"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Search, Bell, User, Settings, LogOut } from "lucide-react"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import Link from "next/link"
+import { ThemeToggle } from "@/components/theme-toggle"
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  user?: UserType;
+}
+
+export function SiteHeader({ user }: SiteHeaderProps) {
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
-        />
-        <h1 className="text-base font-medium">Documents</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
-              href="https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(examples)/dashboard"
-              rel="noopener noreferrer"
-              target="_blank"
-              className="dark:text-foreground"
-            >
-              GitHub
-            </a>
+    <header className="sticky top-0 z-10 h-16 shrink-0 bg-background/95 backdrop-blur-sm border-b border-border transition-all ease-linear">
+      <div className="flex h-full w-full items-center justify-between px-4 lg:px-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 max-w-2xl">
+          <div className="hidden md:flex items-center w-full rounded-md bg-muted px-2.5 py-1.5 text-sm border border-border/50">
+            <Search className="h-4 w-4 text-muted-foreground mr-2" />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          
+          <Button variant="ghost" size="icon" className="text-foreground relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+              3
+            </span>
           </Button>
+          
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-border hover:border-primary/30 transition-colors">
+                  <Avatar className="h-full w-full">
+                    <AvatarImage 
+                      src={`https://ui-avatars.com/api/?name=${user.name || user.email}&background=random`} 
+                      alt={user.name || user.email}
+                    />
+                    <AvatarFallback>
+                      {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>
