@@ -1,10 +1,10 @@
 'use client';
 
-import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Suspense, useState } from 'react';
-import { useActionState } from 'react';
+import { Suspense, useState, useOptimistic } from 'react';
+// Temporary fix until useActionState is stable
+import { useFormState } from 'react-dom';
 
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -13,18 +13,24 @@ import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { requestPasswordReset } from '../actions';
 import { Loader2, CheckCircle } from 'lucide-react';
+import { ActionState } from '@/lib/auth/middleware';
 
-export const metadata: Metadata = {
-  title: 'Forgot Password',
-  description: 'Reset your password',
-};
 
 export default function ForgotPasswordPage() {
-  const [state, formAction, pending] = useActionState(requestPasswordReset, {});
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <ForgotPasswordForm />
+    </Suspense>
+  );
+}
+
+function ForgotPasswordForm() {
+  const [state, formAction] = useFormState<ActionState, FormData>(requestPasswordReset, { error: '', success: '' });
+  const [isPending, startTransition] = useOptimistic(false);
   const [email, setEmail] = useState('');
 
   return (
-    <Suspense>
+    <>
       {/* Mobile view */}
       <div className="flex w-full flex-col justify-center space-y-6 md:hidden">
         <div className="flex flex-col space-y-2 text-center">
@@ -48,7 +54,7 @@ export default function ForgotPasswordPage() {
                   className="rounded-md"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={pending || state.success}
+                  disabled={!!isPending || !!state.success}
                 />
               </div>
               
@@ -66,9 +72,9 @@ export default function ForgotPasswordPage() {
               ) : (
                 <Button 
                   className="w-full" 
-                  disabled={pending || !email || state.success}
+                  disabled={!!isPending || !email || !!state.success}
                 >
-                  {pending ? (
+                  {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Sending...
@@ -143,7 +149,7 @@ export default function ForgotPasswordPage() {
                       className="rounded-md"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      disabled={pending || state.success}
+                      disabled={!!isPending || !!state.success}
                     />
                   </div>
                   
@@ -161,9 +167,9 @@ export default function ForgotPasswordPage() {
                   ) : (
                     <Button 
                       className="w-full" 
-                      disabled={pending || !email || state.success}
+                      disabled={!!isPending || !email || !!state.success}
                     >
-                      {pending ? (
+                      {isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Sending...
@@ -188,6 +194,6 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
       </div>
-    </Suspense>
+    </>
   );
 }

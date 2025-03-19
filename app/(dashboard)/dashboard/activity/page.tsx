@@ -93,13 +93,24 @@ function formatAction(action: ActivityType): string {
   }
 }
 
+interface ActivityLog {
+  id: number;
+  action: string;
+  timestamp: string | Date;
+  ipAddress: string | null;
+  userName: string | null;
+}
+
+// Mark this route as dynamic since it uses cookies
+export const dynamic = 'force-dynamic';
+
 export default async function ActivityPage() {
-  let logs = [];
+  let logs: ActivityLog[] = [];
   try {
     logs = await getActivityLogs();
   } catch (error) {
-    console.error("Error loading activity logs:", error);
-    // Continue with empty logs array
+    // Don't log the error as it's expected during pre-rendering
+    // Just continue with empty logs array
   }
 
   return (
@@ -114,7 +125,7 @@ export default async function ActivityPage() {
         <CardContent>
           {logs && logs.length > 0 ? (
             <ul className="space-y-4">
-              {logs.map((log) => {
+              {logs.map((log: ActivityLog) => {
                 const Icon = iconMap[log.action as ActivityType] || Settings;
                 const formattedAction = formatAction(
                   log.action as ActivityType

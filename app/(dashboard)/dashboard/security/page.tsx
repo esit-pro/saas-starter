@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
-import { startTransition, useActionState } from 'react';
+import { startTransition, useOptimistic } from 'react';
+import { useFormState } from 'react-dom';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
 
 type ActionState = {
@@ -14,15 +15,17 @@ type ActionState = {
 };
 
 export default function SecurityPage() {
-  const [passwordState, passwordAction, isPasswordPending] = useActionState<
+  const [passwordState, passwordAction] = useFormState<
     ActionState,
     FormData
   >(updatePassword, { error: '', success: '' });
+  const [isPasswordPending, startPasswordTransition] = useOptimistic(false);
 
-  const [deleteState, deleteAction, isDeletePending] = useActionState<
+  const [deleteState, deleteAction] = useFormState<
     ActionState,
     FormData
   >(deleteAccount, { error: '', success: '' });
+  const [isDeletePending, startDeleteTransition] = useOptimistic(false);
 
   const handlePasswordSubmit = async (
     event: React.FormEvent<HTMLFormElement>

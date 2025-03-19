@@ -1,10 +1,10 @@
 'use client';
 
-import { Metadata } from 'next';
 import Link from 'next/link';
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useOptimistic } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useActionState } from 'react';
+// Temporary fix until useActionState is stable
+import { useFormState } from 'react-dom';
 
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -13,17 +13,24 @@ import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { resetPassword } from '../actions';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { ActionState } from '@/lib/auth/middleware';
 
-export const metadata: Metadata = {
-  title: 'Reset Password',
-  description: 'Create a new password',
-};
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+// Client component for reset password functionality
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   
-  const [state, formAction, pending] = useActionState(resetPassword, {});
+  const [state, formAction] = useFormState<ActionState, FormData>(resetPassword, { error: '', success: '' });
+  const [isPending, startTransition] = useOptimistic(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordsMatch, setPasswordsMatch] = useState(true);
@@ -50,7 +57,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <Suspense>
+    <>
       {/* Mobile view */}
       <div className="flex w-full flex-col justify-center space-y-6 md:hidden">
         <div className="flex flex-col space-y-2 text-center">
@@ -78,7 +85,7 @@ export default function ResetPasswordPage() {
                   className="rounded-md"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={pending || state.success}
+                  disabled={!!isPending || !!state.success}
                 />
                 {password && password.length < 8 && (
                   <p className="text-xs text-amber-500 flex items-center mt-1">
@@ -122,7 +129,7 @@ export default function ResetPasswordPage() {
                   )}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={pending || state.success}
+                  disabled={!!isPending || !!state.success}
                 />
               </div>
               
@@ -151,9 +158,9 @@ export default function ResetPasswordPage() {
               ) : (
                 <Button 
                   className="w-full" 
-                  disabled={pending || !formIsValid}
+                  disabled={!!isPending || !formIsValid}
                 >
-                  {pending ? (
+                  {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Resetting...
@@ -225,7 +232,7 @@ export default function ResetPasswordPage() {
                       className="rounded-md"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      disabled={pending || state.success}
+                      disabled={!!isPending || !!state.success}
                     />
                     {password && password.length < 8 && (
                       <p className="text-xs text-amber-500 flex items-center mt-1">
@@ -269,7 +276,7 @@ export default function ResetPasswordPage() {
                       )}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={pending || state.success}
+                      disabled={!!isPending || !!state.success}
                     />
                   </div>
                   
@@ -298,9 +305,9 @@ export default function ResetPasswordPage() {
                   ) : (
                     <Button 
                       className="w-full" 
-                      disabled={pending || !formIsValid}
+                      disabled={!!isPending || !formIsValid}
                     >
-                      {pending ? (
+                      {isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Resetting...
@@ -316,6 +323,6 @@ export default function ResetPasswordPage() {
           </div>
         </div>
       </div>
-    </Suspense>
+    </>
   );
 }
