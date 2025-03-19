@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { User } from '@/lib/db/schema';
-import { Bell, LogOut, Search, Settings, User as UserIcon } from 'lucide-react';
+import { Bell, LogOut, Search, Settings, User as UserIcon, Shield, BarChart, Users } from 'lucide-react';
 import Link from 'next/link';
 import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
@@ -89,6 +89,24 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 <Link href="/dashboard/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Team Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/security">
+                  <Shield className="mr-2 h-4 w-4" />
+                  <span>Security</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/activity">
+                  <BarChart className="mr-2 h-4 w-4" />
+                  <span>Activity</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

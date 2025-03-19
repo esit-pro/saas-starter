@@ -22,7 +22,7 @@ export default function DashboardLayout({
 
   // If we're not on a settings page, just render the children without the settings sidebar
   if (!shouldShowSettingsSidebar) {
-    return <>{children}</>;
+    return <div className="w-full">{children}</div>;
   }
 
   const navItems = [

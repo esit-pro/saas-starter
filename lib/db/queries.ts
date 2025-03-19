@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, sql } from 'drizzle-orm';
+import { desc, and, eq, isNull, sql, or } from 'drizzle-orm';
 import { db } from './drizzle';
 import { 
   activityLogs, 
@@ -91,22 +91,44 @@ export async function getUserWithTeam(userId: number) {
 export async function getActivityLogs() {
   const user = await getUser();
   if (!user) {
-    throw new Error('User not authenticated');
+    return []; // Return empty array instead of throwing error
   }
 
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.name,
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
+  try {
+    // First, try to get the user's team
+    const userWithTeam = await getUserWithTeam(user.id);
+    const teamId = userWithTeam?.teamId;
+
+    let query = db
+      .select({
+        id: activityLogs.id,
+        action: activityLogs.action,
+        timestamp: activityLogs.timestamp,
+        ipAddress: activityLogs.ipAddress,
+        userName: users.name,
+      })
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.userId, users.id));
+    
+    // If we have a team ID, filter by team and user, otherwise just by user
+    if (teamId) {
+      query = query.where(
+        or(
+          eq(activityLogs.userId, user.id),
+          eq(activityLogs.teamId, teamId)
+        )
+      );
+    } else {
+      query = query.where(eq(activityLogs.userId, user.id));
+    }
+    
+    return await query
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(10);
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    return [];
+  }
 }
 
 export async function getTeamForUser(userId: number) {
