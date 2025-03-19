@@ -40,7 +40,6 @@ const managementItems = [
     icon: Users,
     items: [
       { title: "Members", href: "/dashboard/team" },
-      { title: "Roles", href: "/dashboard/team/roles" },
       { title: "Invites", href: "/dashboard/team/invites" },
     ]
   },
@@ -57,6 +56,7 @@ const managementItems = [
     title: "Settings", 
     icon: Settings,
     items: [
+      { title: "Team", href: "/dashboard" },
       { title: "General", href: "/dashboard/general" },
       { title: "Security", href: "/dashboard/security" },
       { title: "Activity", href: "/dashboard/activity" },

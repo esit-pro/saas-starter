@@ -25,14 +25,26 @@
 - **Authentication**: JWT stored in cookies via the auth system; use auth middleware for protected routes
 
 ## UI Component System
-- **Card Components**: Cards use consistent styling with variants (default, soft, outline)
+- **Card Components**: Cards use consistent styling with variants (default, soft, outline, card)
   - Cards in dark mode use `bg-primary/5` background color for consistent theme
   - StatCard icon containers use `dark:bg-primary/5 dark:text-primary` in dark mode
+  - The "card" button variant uses the same styling as cards in dark mode
+- **Chart Components**: Revenue charts use transparent background in both light and dark modes
 - **Theme System**: Light and dark mode with CSS variables defined in globals.css
   - Global CSS variables follow the pattern `--color-name: hsl(var(--name))` or `--color-name: var(--name)`
   - Dark mode class toggles variable values for consistent theming
 - **Component Design**: Components use Radix UI primitives customized with Tailwind
   - Form controls, dialogs, and interactive elements follow shadcn/ui principles
+
+## Layout Patterns
+- **Dashboard Layout**: Responsive dashboard with modern sidebar navigation
+  - Workspaces use bright, high-contrast color indicators (`bg-blue-500`, `bg-purple-500`, etc.)
+  - User avatar in header matches sidebar account styling for consistency
+- **Authentication Pages**: Two-column layout for authentication screens
+  - Left column with dark background, testimonial, and logo
+  - Right column with authentication form
+  - Responsive mobile view with simplified layout
+  - Theme toggle and sign-in/sign-up link positioned together in top-right corner
 
 ## Tech Stack
 - Next.js 15 with Turbopack

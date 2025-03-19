@@ -103,8 +103,8 @@ export default async function ActivityPage() {
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">
         Activity Log
       </h1>
       <Card>
@@ -152,6 +152,6 @@ export default async function ActivityPage() {
           )}
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 }
