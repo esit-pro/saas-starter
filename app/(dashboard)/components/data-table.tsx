@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ContextMenuRow } from '@/components/ui/context-menu-row';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -41,19 +43,49 @@ interface DataTableProps<TData, TValue> {
   createRoute?: string;
   searchPlaceholder?: string;
   filterColumn?: string;
+  onDelete?: (id: number) => Promise<void>;
+  contextMenuItems?: React.ReactNode | ((row: any) => React.ReactNode);
 }
 
-export function DataTable<TData, TValue>({
+// Expand table meta with custom properties
+type CustomTableMeta = {
+  handleDelete?: (id: number) => Promise<void>;
+  contextMenuItems?: React.ReactNode | ((row: any) => React.ReactNode);
+};
+
+export function DataTable<TData extends { id: number }, TValue>({
   columns,
   data,
   title,
   createRoute,
   searchPlaceholder = 'Search...',
   filterColumn = 'name',
+  onDelete,
+  contextMenuItems,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [deletingIds, setDeletingIds] = useState<number[]>([]);
   
+  // Handle row deletion with animation
+  const handleDelete = async (id: number) => {
+    if (!onDelete) return;
+    
+    // Add the ID to the deleting list to trigger animation
+    setDeletingIds((prev) => [...prev, id]);
+    
+    // Delay the actual deletion to allow the animation to complete
+    setTimeout(async () => {
+      try {
+        await onDelete(id);
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        // Remove from deleting list if the deletion fails
+        setDeletingIds((prev) => prev.filter((itemId) => itemId !== id));
+      }
+    }, 350); // Slightly longer than the animation duration
+  };
+
   const table = useReactTable({
     data,
     columns,
@@ -72,6 +104,10 @@ export function DataTable<TData, TValue>({
         pageSize: 10,
       },
     },
+    meta: {
+      handleDelete, // Make the delete handler available to cell renderers
+      contextMenuItems, // Add context menu items to meta
+    } as CustomTableMeta,
   });
 
   return (
@@ -168,18 +204,78 @@ export function DataTable<TData, TValue>({
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="p-4 align-middle">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <AnimatePresence>
+                  {table.getRowModel().rows.map((row) => {
+                    const rowData = row.original as TData;
+                    const isDeleting = deletingIds.includes(rowData.id);
+                    if (isDeleting) return null;
+                    
+                    // Extract the actions column to get its content
+                    const actionsColumn = row.getVisibleCells().find(
+                      cell => cell.column.id === 'actions'
+                    );
+                    
+                    // Get the context menu content for the row
+                    const renderContextMenu = (row: any) => {
+                      // Get context menu items from table meta
+                      const meta = table.options.meta as CustomTableMeta | undefined;
+                      if (meta?.contextMenuItems) {
+                        try {
+                          // If it's a function, call it with the row
+                          if (typeof meta.contextMenuItems === 'function') {
+                            return meta.contextMenuItems(row);
+                          }
+                          // Otherwise return directly
+                          return meta.contextMenuItems;
+                        } catch (e) {
+                          console.error('Error rendering context menu:', e);
+                        }
+                      }
+                      
+                      // Fallback menu items if nothing is provided
+                      return (
+                        <>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem key="view">View details</DropdownMenuItem>
+                          <DropdownMenuItem key="edit">Edit</DropdownMenuItem>
+                          <DropdownMenuSeparator key="sep" />
+                          <DropdownMenuItem key="delete" className="text-red-600">Delete</DropdownMenuItem>
+                        </>
+                      );
+                    };
+                    
+                    return (
+                      <ContextMenuRow
+                        key={row.id}
+                        row={row}
+                        renderContextMenu={renderContextMenu}
+                        asChild={true}
+                      >
+                        <motion.tr
+                          layout
+                          initial={{ opacity: 1, x: 0 }}
+                          exit={{ 
+                            opacity: 0, 
+                            x: -100,
+                            transition: { duration: 0.3 }
+                          }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5"
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <motion.td 
+                              layout
+                              key={cell.id} 
+                              className="p-4 align-middle"
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </motion.td>
+                          ))}
+                        </motion.tr>
+                      </ContextMenuRow>
+                    );
+                  })}
+                </AnimatePresence>
               ) : (
                 <tr>
                   <td colSpan={columns.length} className="p-4 text-center text-gray-500 dark:text-muted-foreground">

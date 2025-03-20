@@ -12,7 +12,10 @@ import {
   CheckCircle,
   XCircle,
   Plus,
+  Calendar as CalendarIcon,
+  File as FileIcon,
 } from 'lucide-react';
+import { SplitView } from '../../components/split-view';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
 import { Input } from '@/components/ui/input';
@@ -256,8 +259,211 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
   );
 }
 
+function ClientDetailPane({ client }: { client: Client | null }) {
+  if (!client) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        <div className="text-center">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
+          <h3 className="text-lg font-medium">Select a client to view details</h3>
+          <p className="mt-2">Click on a client from the list to view their detailed information</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto">
+      <div className="p-6 flex flex-col gap-6">
+        {/* Client header */}
+        <div className="flex items-center">
+          <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
+            <Users className="h-8 w-8" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{client.name}</h2>
+            <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center gap-4 mt-1">
+              <div className="flex items-center">
+                <span>Client #{client.id}</span>
+              </div>
+              <div className="flex items-center">
+                {client.isActive ? (
+                  <span className="flex items-center text-green-700 dark:text-green-500">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Active
+                  </span>
+                ) : (
+                  <span className="flex items-center text-red-700 dark:text-red-500">
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Inactive
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center">
+                <span>Created {formatDistanceToNow(client.createdAt, { addSuffix: true })}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact information */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="border dark:border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Contact Information</h3>
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <div className="w-8">
+                  <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Email</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">
+                    <a href={`mailto:${client.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
+                      {client.email}
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8">
+                  <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Phone</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">{client.phone}</div>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8">
+                  <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Contact Person</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">{client.contactName}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border dark:border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Account Details</h3>
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <div className="w-8">
+                  <CheckCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Status</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">
+                    {client.isActive ? "Active" : "Inactive"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8">
+                  <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Client Since</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">
+                    {client.createdAt.toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8">
+                  <FileIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Contracts</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">
+                    3 Active Contracts
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Timeline */}
+        <div className="border dark:border-border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Recent Activity</h3>
+          
+          <div className="space-y-6">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="relative pl-6 pb-6 border-l dark:border-border">
+                <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-blue-500"></div>
+                <div className="text-sm text-gray-500 dark:text-muted-foreground">
+                  {formatDistanceToNow(
+                    new Date(client.createdAt.getTime() - i * 86400000 * (i+1)),
+                    { addSuffix: true }
+                  )}
+                </div>
+                <div className="font-medium text-gray-900 dark:text-foreground mt-1">
+                  {i === 0 && "Invoice #INV-2023-005 sent"}
+                  {i === 1 && "Payment received for #INV-2023-004"}
+                  {i === 2 && "Support ticket #ST-2023-021 closed"}
+                  {i === 3 && "Meeting scheduled with sales team"}
+                  {i === 4 && "Client onboarding completed"}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
+                  {i === 0 && "Invoice for $2,500.00 was sent via email"}
+                  {i === 1 && "Payment of $1,750.00 received via bank transfer"}
+                  {i === 2 && "Issue with login access was resolved"}
+                  {i === 3 && "Scheduled for next Tuesday at 10:00 AM"}
+                  {i === 4 && "All setup procedures have been completed"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming Services */}
+        <div className="border dark:border-border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">
+            Upcoming Services
+          </h3>
+          
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => {
+              const futureDate = new Date();
+              futureDate.setDate(futureDate.getDate() + (i+1) * 5);
+              
+              return (
+                <div key={i} className="flex items-start border-b dark:border-border pb-4 last:border-0 last:pb-0">
+                  <div className="w-12 h-12 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-4">
+                    <CalendarIcon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 dark:text-foreground">
+                      {i === 0 && "Quarterly System Review"}
+                      {i === 1 && "Software Upgrade"}
+                      {i === 2 && "Annual Strategy Meeting"}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
+                      {futureDate.toLocaleDateString()} at {
+                        i === 0 ? "10:00 AM" : i === 1 ? "2:30 PM" : "9:00 AM"
+                      }
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
+                      {i === 0 && "Review existing systems and discuss potential improvements"}
+                      {i === 1 && "Deploy latest software version across all locations"}
+                      {i === 2 && "Annual planning session with executive team"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
@@ -278,6 +484,21 @@ export default function ClientsPage() {
 
     setClients([newClient, ...clients]);
     setShowCreateForm(false);
+  };
+  
+  // Handler for deleting a client
+  const handleDeleteClient = async (id: number) => {
+    // In a real app, you'd call an API to delete the client
+    // For this demo, we'll just remove it from the state
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setClients(clients.filter(client => client.id !== id));
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      return Promise.reject(error);
+    }
   };
 
   const columns = [
@@ -357,7 +578,7 @@ export default function ClientsPage() {
     },
     {
       id: 'actions',
-      cell: ({ row }: any) => (
+      cell: ({ row, table }: any) => (
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -368,11 +589,16 @@ export default function ClientsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href={`/dashboard/clients/${row.original.id}`} className="cursor-pointer flex items-center">
-                  <Eye className="mr-2 h-4 w-4" />
-                  <span>View details</span>
-                </Link>
+              <DropdownMenuItem 
+                className="cursor-pointer flex items-center"
+                onClick={() => {
+                  const clientId = row.original.id;
+                  // Toggle selection - if already selected, deselect; otherwise select
+                  setSelectedClientId(prev => prev === clientId ? null : clientId);
+                }}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                <span>View details</span>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/dashboard/clients/${row.original.id}/edit`} className="cursor-pointer flex items-center">
@@ -383,7 +609,12 @@ export default function ClientsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
-                onClick={() => alert(`Delete ${row.original.name}`)}
+                onClick={() => {
+                  const handleDelete = table.options.meta?.handleDelete as (id: number) => Promise<void>;
+                  if (handleDelete) {
+                    handleDelete(row.original.id);
+                  }
+                }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 <span>Delete</span>
@@ -395,7 +626,76 @@ export default function ClientsPage() {
     },
   ];
 
-  return (
+  // Find selected client
+  const selectedClient = clients.find(client => client.id === selectedClientId) || null;
+
+  // Update click handler for row actions
+  const handleRowClick = (clientId: number) => {
+    setSelectedClientId(clientId);
+  };
+
+  // Update the "View details" action to handle clicking
+  const contextMenuItems = (row: any) => {
+    // Ensure row.original is available
+    if (!row?.original) {
+      console.error('Row original data missing in context menu');
+      return null;
+    }
+    
+    return (
+      <>
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            const clientId = row.original.id;
+            // Toggle selection - if already selected, deselect; otherwise select
+            setSelectedClientId(prev => prev === clientId ? null : clientId);
+          }}
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          <span>View details</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/dashboard/clients/${row.original.id}/edit`} className="cursor-pointer flex items-center">
+            <Pencil className="mr-2 h-4 w-4" />
+            <span>Edit</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
+          onClick={() => {
+            if (handleDeleteClient) {
+              handleDeleteClient(row.original.id);
+              if (selectedClientId === row.original.id) {
+                setSelectedClientId(null);
+              }
+            }
+          }}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          <span>Delete</span>
+        </DropdownMenuItem>
+      </>
+    );
+  };
+
+  // Create a DataTable with context menu - make sure we handle the row data properly
+  const clientsTable = (
+    <DataTable
+      columns={columns}
+      data={clients}
+      title="Client List"
+      searchPlaceholder="Search clients..."
+      filterColumn="name"
+      onDelete={handleDeleteClient}
+      contextMenuItems={contextMenuItems}
+    />
+  );
+
+  // Setup the main view
+  const tableView = (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Clients</h1>
@@ -432,13 +732,19 @@ export default function ClientsPage() {
         </Dialog>
       </div>
       
-      <DataTable
-        columns={columns}
-        data={clients}
-        title="Client List"
-        searchPlaceholder="Search clients..."
-        filterColumn="name"
-      />
+      {clientsTable}
     </div>
+  );
+
+  // Conditionally render split view or just the table based on selection
+  return selectedClientId ? (
+    <SplitView 
+      left={tableView} 
+      right={<ClientDetailPane client={selectedClient} />} 
+      leftWidth="3fr"
+      rightWidth="2fr"
+    />
+  ) : (
+    tableView
   );
 }

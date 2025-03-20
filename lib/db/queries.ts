@@ -201,6 +201,14 @@ export async function updateClient(clientId: number, clientData: Partial<Omit<ty
     .returning();
 }
 
+export async function deleteClient(clientId: number) {
+  // In production, consider using soft delete by setting a deletedAt timestamp
+  return await db
+    .delete(clients)
+    .where(eq(clients.id, clientId))
+    .returning();
+}
+
 // Service ticket queries
 
 export async function getServiceTickets(teamId: number, filters?: {
@@ -295,6 +303,14 @@ export async function updateServiceTicket(
   return await db
     .update(serviceTickets)
     .set(updates)
+    .where(eq(serviceTickets.id, ticketId))
+    .returning();
+}
+
+export async function deleteServiceTicket(ticketId: number) {
+  // In production, consider using soft delete by setting a deletedAt timestamp
+  return await db
+    .delete(serviceTickets)
     .where(eq(serviceTickets.id, ticketId))
     .returning();
 }

@@ -105,6 +105,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { ContextMenuRow } from "@/components/ui/context-menu-row"
 
 export const schema = z.object({
   id: z.number(),
@@ -115,6 +116,12 @@ export const schema = z.object({
   limit: z.string(),
   reviewer: z.string(),
 })
+
+// Custom meta type for table
+type CustomTableMeta = {
+  handleDelete?: (id: number) => Promise<void>;
+  contextMenuItems?: React.ReactNode;
+};
 
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
@@ -316,8 +323,49 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
     id: row.original.id,
   })
 
+  // Get the actions column to use for the context menu
+  const actionsColumn = row.getVisibleCells().find(
+    cell => cell.column.id === "actions"
+  );
+  
+  // Function to render the context menu content
+  const renderContextMenu = (row: Row<z.infer<typeof schema>>) => {
+    if (actionsColumn) {
+      // Extract the dropdown menu items
+      const actionCell = actionsColumn.column.columnDef.cell;
+      
+      if (typeof actionCell === 'function') {
+        const ctx = actionsColumn.getContext();
+        
+        try {
+          // Get meta content if available
+          const meta = ctx.table.options.meta as CustomTableMeta | undefined;
+          
+          // If we have custom items in meta, use those
+          if (meta?.contextMenuItems) {
+            return meta.contextMenuItems;
+          }
+          
+          // Otherwise return our standard items directly
+          return [
+            <DropdownMenuItem key="edit">Edit</DropdownMenuItem>,
+            <DropdownMenuItem key="copy">Make a copy</DropdownMenuItem>,
+            <DropdownMenuItem key="favorite">Favorite</DropdownMenuItem>,
+            <DropdownMenuSeparator key="sep" />,
+            <DropdownMenuItem key="delete" variant="destructive">Delete</DropdownMenuItem>
+          ];
+        } catch (e) {
+          console.error('Error rendering context menu:', e);
+        }
+      }
+    }
+    return null;
+  };
+
   return (
-    <TableRow
+    <ContextMenuRow
+      row={row}
+      renderContextMenu={renderContextMenu}
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
@@ -332,7 +380,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
-    </TableRow>
+    </ContextMenuRow>
   )
 }
 
