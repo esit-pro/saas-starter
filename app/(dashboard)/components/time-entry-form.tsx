@@ -54,22 +54,21 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
   };
 
   return (
-    <Card className="p-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
+    <form id="time-entry-form" onSubmit={handleSubmit} className="h-full flex flex-col">
+      <div className="grid gap-6 flex-1">
+        <div className="grid gap-2">
           <Label htmlFor="description">Description</Label>
           <Input
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What work did you perform?"
-            className="w-full"
             required
           />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor="hours">Hours</Label>
             <Input
               id="hours"
@@ -77,10 +76,9 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
               min="0"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full"
             />
           </div>
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor="minutes">Minutes</Label>
             <Input
               id="minutes"
@@ -89,26 +87,30 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
               max="59"
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
-              className="w-full"
             />
           </div>
         </div>
         
-        <RadioGroup defaultValue="billable" value={billable ? "billable" : "non-billable"} onValueChange={(val) => setBillable(val === "billable")}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="billable" id="billable" />
-            <Label htmlFor="billable">Billable</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="non-billable" id="non-billable" />
-            <Label htmlFor="non-billable">Non-billable</Label>
-          </div>
-        </RadioGroup>
+        <div className="grid gap-2">
+          <Label>Billing Type</Label>
+          <RadioGroup defaultValue="billable" value={billable ? "billable" : "non-billable"} onValueChange={(val) => setBillable(val === "billable")}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="billable" id="billable" />
+              <Label htmlFor="billable" className="font-normal">Billable</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="non-billable" id="non-billable" />
+              <Label htmlFor="non-billable" className="font-normal">Non-billable</Label>
+            </div>
+          </RadioGroup>
+        </div>
         
-        <Button type="submit" className="w-full">
-          Log Time
-        </Button>
-      </form>
-    </Card>
+        <div className="mt-auto">
+          <Button type="submit" className="w-full">
+            Log Time
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 } 

@@ -98,31 +98,35 @@ export function UserAuthForm({
               disabled={pending}
               className="rounded-md"
             />
-            {mode === 'signup' && password && password.length < 8 && (
-              <p className="text-xs text-amber-500 flex items-center mt-1">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Password must be at least 8 characters
-              </p>
-            )}
+            <div className="h-5">
+              {mode === 'signup' && password && password.length < 8 && (
+                <p className="text-xs text-amber-500 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Password must be at least 8 characters
+                </p>
+              )}
+            </div>
           </div>
           
           {mode === 'signup' && (
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword" className="flex justify-between">
                 <span>Confirm Password</span>
-                {confirmPassword && (
-                  passwordsMatch ? (
-                    <span className="text-xs text-green-500 flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Passwords match
-                    </span>
-                  ) : (
-                    <span className="text-xs text-destructive flex items-center">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Passwords don't match
-                    </span>
-                  )
-                )}
+                <div className="h-4 inline-flex items-center">
+                  {confirmPassword && (
+                    passwordsMatch ? (
+                      <span className="text-xs text-green-500 flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Passwords match
+                      </span>
+                    ) : (
+                      <span className="text-xs text-destructive flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Passwords don't match
+                      </span>
+                    )
+                  )}
+                </div>
               </Label>
               <Input
                 id="confirmPassword"

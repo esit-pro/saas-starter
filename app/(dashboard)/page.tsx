@@ -13,7 +13,8 @@ import {
   Calendar,
   CheckCircle,
   AlertCircle,
-  Circle
+  Circle,
+  DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
@@ -91,7 +92,8 @@ export default async function Dashboard() {
 
   // In a real app, you would fetch this data from your database
   // For this demo, we'll use the functions we created but with mock data
-  const clientsData = { clientCount: 12, activeTicketsCount: 7 };
+  const clientsData = { activeTicketsCount: 7 };
+  const revenueData = { monthToDate: 18750, lastMonth: 15800 };
   const timeData = { 
     totalHours: 120, 
     billableHours: 92, 
@@ -109,8 +111,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
@@ -122,11 +123,12 @@ export default async function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard 
-          title="Total Clients" 
-          value={clientsData.clientCount} 
-          description="Active clients" 
-          icon={Users}
-          colorClass="bg-purple-100 text-purple-600"
+          title="Net Revenue" 
+          value={formatCurrency(revenueData.monthToDate)} 
+          description="Month to date" 
+          icon={DollarSign}
+          trend={19}
+          colorClass="bg-green-100 text-green-600"
         />
         <StatCard 
           title="Open Tickets" 
