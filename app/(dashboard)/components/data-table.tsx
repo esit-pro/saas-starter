@@ -140,8 +140,8 @@ export function DataTable<TData, TValue>({
       </div>
       
       <div className="border-t border-gray-200 dark:border-border">
-        <div className="relative w-full overflow-auto">
-          <table className="w-full caption-bottom text-sm">
+        <div className="table-container">
+          <table className="caption-bottom text-sm">
             <thead className="bg-gray-50 dark:bg-transparent [&_tr]:border-b [&_tr]:dark:border-border">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr 

@@ -296,4 +296,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Global table styles for horizontal scrolling instead of line breaks */
+  table {
+    @apply min-w-full w-max;
+  }
+  
+  .table-container {
+    @apply w-full overflow-x-auto;
+  }
+  
+  table td, table th {
+    @apply whitespace-nowrap;
+  }
 }
