@@ -53,7 +53,7 @@ export function ClientCombobox({
             role="combobox"
             aria-expanded={open}
             aria-controls="client-list"
-            className="flex w-full items-center justify-between rounded-md border border-input bg-transparent h-9 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex w-full items-center justify-between rounded-md border border-input bg-white dark:bg-zinc-800 h-9 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {selectedClient ? selectedClient.name : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

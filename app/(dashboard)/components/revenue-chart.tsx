@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart } from '@/components/ui/chart';
+import { CustomBarChart } from '@/components/ui/custom-bar-chart';
 
 // Format currency for display
 function formatCurrency(amount: number) {
@@ -20,7 +20,7 @@ interface RevenueData {
 
 export function RevenueChart({ data }: { data: RevenueData[] }) {
   return (
-    <BarChart
+    <CustomBarChart
       className="h-[280px]"
       data={data}
       index="month"

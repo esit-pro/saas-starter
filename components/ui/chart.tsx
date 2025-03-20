@@ -18,6 +18,9 @@ import { ContentType, TooltipProps } from 'recharts/types/component/Tooltip';
 
 import { cn } from '@/lib/utils';
 
+// Replace @remixicon/react with lucide-react icons
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
@@ -476,7 +479,7 @@ export type BarChartProps = {
   layout?: "horizontal" | "vertical"
   onValueChange?: (value: any) => void
   className?: string
-  customTooltip?: ContentType<number, string>
+  customTooltip?: React.FC<any>
 }
 
 export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
@@ -573,16 +576,18 @@ export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
       }
     }
 
-    const handleLegendClick = (dataKey: string) => {
-      setActiveLegend(activeLegend === dataKey ? undefined : dataKey)
+    const handleLegendClick = (dataKey: string | undefined) => {
+      if (!dataKey) return;
+      
+      setActiveLegend(activeLegend === dataKey ? undefined : dataKey);
       
       if (onValueChange) {
         onValueChange({
           eventType: "legendClick",
           categoryClicked: dataKey,
-        })
+        });
       }
-    }
+    };
 
     const tooltipFormatter = (value: number, _: string, props: any) => {
       return [valueFormatter ? valueFormatter(value) : value, props.dataKey]
@@ -633,7 +638,7 @@ export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
                       ? [data[0][index], data[data.length - 1][index]]
                       : undefined
                   }
-                  interval={intervalType === "equidistant" ? "preserveStartEnd" : 0}
+                  interval={intervalType === "equidistant" ? 0 : 0}
                   minTickGap={5}
                   className="text-xs font-medium text-slate-500 dark:text-slate-400"
                   tickLine={false}
@@ -658,17 +663,9 @@ export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
               
               {showTooltip ? (
                 <Tooltip
-                  cursor={false}
-                  contentStyle={{
-                    backgroundColor: "var(--background)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.375rem",
-                    boxShadow:
-                      "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-                  }}
+                  content={(props) => customTooltip ? React.createElement(customTooltip, props) : null}
                   formatter={tooltipFormatter}
-                  wrapperClassName="!outline-none"
-                  content={customTooltip}
+                  cursor={{ opacity: 0.5 }}
                 />
               ) : null}
               
@@ -680,7 +677,7 @@ export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
                   className="text-sm mb-6"
                   onClick={(e) => {
                     if (e && e.dataKey) {
-                      handleLegendClick(e.dataKey.toString())
+                      handleLegendClick(e.dataKey.toString());
                     }
                   }}
                   iconType="circle"
@@ -712,9 +709,7 @@ export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
                   onClick={(props) => handleBarClick(props)}
                   isAnimationActive={showAnimation}
                   animationDuration={animationDuration}
-                  shape={(props: any) =>
-                    renderShape(props as ShapeProps, activeBar, activeLegend, layout)
-                  }
+                  shape={(props: any) => renderShape(props, activeBar, activeLegend, layout)}
                 />
               ))}
             </RechartsBarChart>
