@@ -48,15 +48,15 @@ export function ClientCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {selectedClient ? selectedClient.name : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        <button
+            type="button"
+            role="combobox"
+            aria-expanded={open}
+            className="flex w-full items-center justify-between rounded-md border border-input bg-transparent h-9 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            {selectedClient ? selectedClient.name : placeholder}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <div className="flex flex-col">
@@ -66,7 +66,7 @@ export function ClientCombobox({
               placeholder="Search client..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-8 w-full rounded-md bg-transparent border-0 py-1 text-sm outline-none focus-visible:outline-none"
+              className="flex h-8 w-full rounded-md bg-transparent border-0 py-1 text-sm outline-none focus-visible:outline-none placeholder:text-muted-foreground"
             />
           </div>
           <div className="max-h-[300px] overflow-y-auto">

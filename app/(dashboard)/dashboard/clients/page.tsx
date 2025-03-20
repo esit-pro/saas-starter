@@ -11,9 +11,22 @@ import {
   Mail,
   CheckCircle,
   XCircle,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -148,14 +161,124 @@ const demoClients: Client[] = [
   },
 ];
 
+// Create Client Form component
+function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Client, 'id' | 'createdAt'>) => void }) {
+  const [name, setName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isActive, setIsActive] = useState(true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim() || !contactName.trim() || !email.trim()) return;
+    
+    onCreateClient({
+      name,
+      contactName,
+      email,
+      phone,
+      isActive
+    });
+    
+    // Reset form
+    setName('');
+    setContactName('');
+    setEmail('');
+    setPhone('');
+    setIsActive(true);
+  };
+
+  return (
+    <div className="py-6">
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-6">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Company Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Acme Corporation"
+              required
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="contactName">Contact Person</Label>
+            <Input
+              id="contactName"
+              value={contactName}
+              onChange={(e) => setContactName(e.target.value)}
+              placeholder="John Doe"
+              required
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="contact@example.com"
+              required
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="isActive" 
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
+            <Label htmlFor="isActive" className="font-normal">Active Client</Label>
+          </div>
+          
+          <Button type="submit" className="w-full" disabled={!name.trim() || !contactName.trim() || !email.trim()}>
+            Create Client
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     // In a real app, you'd fetch data from an API
     // For this demo, we'll use the demo data
     setClients(demoClients);
   }, []);
+  
+  // Handler for adding a new client
+  const handleCreateClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
+    // In a real app, you'd call an API to create the client
+    // For this demo, we'll just add it to the state
+    const newClient: Client = {
+      id: clients.length + 1,
+      ...clientData,
+      createdAt: new Date(),
+    };
+
+    setClients([newClient, ...clients]);
+    setShowCreateForm(false);
+  };
 
   const columns = [
     {
@@ -163,12 +286,12 @@ export default function ClientsPage() {
       header: 'Client Name',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mr-3">
+          <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-3">
             <Users className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-medium text-gray-900">{row.original.name}</div>
-            <div className="text-sm text-gray-500">
+            <div className="font-medium text-gray-900 dark:text-foreground">{row.original.name}</div>
+            <div className="text-sm text-gray-500 dark:text-muted-foreground">
               Client #{row.original.id}
             </div>
           </div>
@@ -187,8 +310,8 @@ export default function ClientsPage() {
       header: 'Email',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          <Mail className="h-4 w-4 text-gray-400 mr-2" />
-          <a href={`mailto:${row.original.email}`} className="text-blue-600 hover:underline">
+          <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
+          <a href={`mailto:${row.original.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
             {row.original.email}
           </a>
         </div>
@@ -199,8 +322,8 @@ export default function ClientsPage() {
       header: 'Phone',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          <Phone className="h-4 w-4 text-gray-400 mr-2" />
-          <span>{row.original.phone}</span>
+          <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
+          <span className="dark:text-foreground">{row.original.phone}</span>
         </div>
       ),
     },
@@ -212,12 +335,12 @@ export default function ClientsPage() {
           {row.original.isActive ? (
             <>
               <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-              <span className="text-green-700">Active</span>
+              <span className="text-green-700 dark:text-green-500">Active</span>
             </>
           ) : (
             <>
               <XCircle className="h-4 w-4 text-red-500 mr-2" />
-              <span className="text-red-700">Inactive</span>
+              <span className="text-red-700 dark:text-red-500">Inactive</span>
             </>
           )}
         </div>
@@ -227,7 +350,7 @@ export default function ClientsPage() {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }: any) => (
-        <div className="text-gray-500">
+        <div className="text-gray-500 dark:text-muted-foreground">
           {formatDistanceToNow(row.original.createdAt, { addSuffix: true })}
         </div>
       ),
@@ -275,14 +398,44 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Clients</h1>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Client
+            </Button>
+          </DialogTrigger>
+          <DialogContent 
+            className="sm:max-w-[600px] bg-white dark:bg-background text-card-foreground dark:text-card-foreground shadow-md
+            data-[state=open]:animate-in data-[state=closed]:animate-out
+            data-[state=open]:slide-in-from-top-2 data-[state=open]:slide-in-from-right-2
+            data-[state=closed]:slide-out-to-top-2 data-[state=closed]:slide-out-to-right-2
+            border border-border dark:border-border/20 rounded-lg"
+          >
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">Create New Client</DialogTitle>
+              <DialogDescription className="text-gray-700 dark:text-gray-300">
+                Fill in the details below to create a new client.
+              </DialogDescription>
+            </DialogHeader>
+            <CreateClientForm 
+              onCreateClient={(data) => {
+                handleCreateClient(data);
+                // Close dialog after submit
+                document.querySelector('[aria-label="Close"]')?.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
       
       <DataTable
         columns={columns}
         data={clients}
         title="Client List"
-        createRoute="/dashboard/clients/new"
         searchPlaceholder="Search clients..."
         filterColumn="name"
       />

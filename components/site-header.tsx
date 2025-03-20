@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { User as UserType } from "@/lib/db/schema"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,17 +14,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { signOut } from "@/app/(login)/actions"
+import { useRouter } from "next/navigation"
 
 interface SiteHeaderProps {
   user?: UserType;
 }
 
 export function SiteHeader({ user }: SiteHeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/sign-in');
+  };
   return (
     <header className="sticky top-0 z-10 h-16 shrink-0 bg-background/95 backdrop-blur-sm transition-all ease-linear">
       <div className="flex h-full w-full items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
         </div>
 
         <div className="flex flex-1 items-center justify-center px-6 max-w-2xl">
@@ -73,19 +82,22 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/profile" className="flex items-center">
+                  <Link href="/dashboard/general" className="flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings" className="flex items-center">
+                  <Link href="/dashboard/security" className="flex items-center">
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>Security</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>

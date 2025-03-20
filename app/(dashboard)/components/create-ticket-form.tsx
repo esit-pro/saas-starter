@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClientCombobox } from './client-combobox';
-import { Card, CardAction } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 type Client = {
   id: number;
@@ -52,70 +52,70 @@ export function CreateTicketForm({ clients, onCreateTicket }: CreateTicketFormPr
   };
 
   return (
-    <Card className="p-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="client">Client</Label>
-          <ClientCombobox
-            clients={clients}
-            selectedClientId={selectedClientId}
-            onClientChange={setSelectedClientId}
-          />
+    <div className="py-6">
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-6">
+          <div className="grid gap-2">
+            <Label htmlFor="client">Client</Label>
+            <ClientCombobox
+              clients={clients}
+              selectedClientId={selectedClientId}
+              onClientChange={setSelectedClientId}
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="title">Ticket Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Brief description of the issue"
+              required
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="description">Description</Label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Detailed description of the issue"
+              className="w-full min-h-[100px] px-3 py-2 bg-transparent text-sm rounded-md border border-input focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground resize-none"
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="priority">Priority</Label>
+            <select
+              id="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="category">Category</Label>
+            <Input
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="e.g., Hardware, Software, Network"
+            />
+          </div>
+          
+          <Button type="submit" className="w-full" disabled={!selectedClientId || !title.trim()}>
+            Create Ticket
+          </Button>
         </div>
-        
-        <div>
-          <Label htmlFor="title">Ticket Title</Label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Brief description of the issue"
-            className="w-full"
-            required
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Detailed description of the issue"
-            className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="priority">Priority</Label>
-          <select
-            id="priority"
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as any)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
-        
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g., Hardware, Software, Network"
-            className="w-full"
-          />
-        </div>
-        
-        <Button type="submit" className="w-full" disabled={!selectedClientId || !title.trim()}>
-          Create Ticket
-        </Button>
       </form>
-    </Card>
+    </div>
   );
 } 

@@ -5,64 +5,26 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
   Home,
-  Users,
   Ticket,
-  Settings, 
-  Shield, 
-  BarChart,
   Building,
-  CreditCard,
   Menu,
   X,
-  ChevronDown,
-  ChevronRight,
-  Inbox,
-  Clock
+  Inbox
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { NavUser } from "./nav-user"
 import { useState } from "react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Card, CardContent, CardAction } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
 const mainNavItems = [
-  { title: "Dashboard", href: "/dashboard", icon: Home },
+  { title: "Dashboard", href: "/", icon: Home },
   { title: "Clients", href: "/dashboard/clients", icon: Building },
   { title: "Tickets", href: "/dashboard/tickets", icon: Ticket },
 ];
 
-const managementItems = [
-  { 
-    title: "Team", 
-    icon: Users,
-    items: [
-      { title: "Members", href: "/dashboard/team" },
-      { title: "Invites", href: "/dashboard/team/invites" },
-    ]
-  },
-  { 
-    title: "Billing", 
-    icon: CreditCard,
-    items: [
-      { title: "Invoices", href: "/dashboard/billing/invoices" },
-      { title: "Plans", href: "/dashboard/billing/plans" },
-      { title: "Payment Methods", href: "/dashboard/billing/methods" }
-    ]
-  },
-  { 
-    title: "Settings", 
-    icon: Settings,
-    items: [
-      { title: "Team", href: "/dashboard" },
-      { title: "General", href: "/dashboard/general" },
-      { title: "Security", href: "/dashboard/security" },
-      { title: "Activity", href: "/dashboard/activity" },
-    ]
-  },
-];
 
 const workspaceItems = [
   { title: "IT Support", color: "bg-blue-500 dark:bg-blue-600" },
@@ -130,7 +92,7 @@ export function ModernSidebar() {
                     href={item.href}
                     className={cn(
                       "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                      pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+                      pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                     )}
@@ -142,48 +104,6 @@ export function ModernSidebar() {
                 ))}
               </div>
 
-              {/* Management Section */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium text-muted-foreground px-3 mb-2">
-                  Management
-                </h3>
-                <div className="space-y-1">
-                  {managementItems.map((group) => (
-                    <Collapsible key={group.title} className="w-full">
-                      <CollapsibleTrigger asChild>
-                        <button
-                          className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <group.icon className="mr-2 h-4 w-4" />
-                            <span>{group.title}</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 transition-transform duration-200 ui-open:rotate-180" />
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          {group.items.map((item) => (
-                            <Link
-                              key={item.title}
-                              href={item.href}
-                              className={cn(
-                                "flex items-center rounded-md px-3 py-1.5 text-sm transition-colors",
-                                pathname === item.href
-                                  ? "text-foreground font-medium"
-                                  : "text-muted-foreground hover:text-foreground"
-                              )}
-                              onClick={() => setIsMenuOpen(false)}
-                            >
-                              <span>{item.title}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))}
-                </div>
-              </div>
 
               {/* Inbox Link */}
               <Link

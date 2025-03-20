@@ -13,6 +13,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Plus,
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
@@ -28,6 +30,16 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { CreateTicketForm } from '../../components/create-ticket-form';
 import { TicketComments } from '../../components/ticket-comments';
 import { TimeEntryForm } from '../../components/time-entry-form';
@@ -229,18 +241,18 @@ const demoComments: Comment[] = [
 ];
 
 const statusColors: Record<string, string> = {
-  'open': 'bg-blue-50 text-blue-700',
-  'in-progress': 'bg-amber-50 text-amber-700',
-  'on-hold': 'bg-purple-50 text-purple-700',
-  'completed': 'bg-green-50 text-green-700',
-  'closed': 'bg-gray-50 text-gray-700',
+  'open': 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+  'in-progress': 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
+  'on-hold': 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400',
+  'completed': 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400',
+  'closed': 'bg-gray-50 text-gray-700 dark:bg-gray-800/40 dark:text-gray-400',
 };
 
 const priorityIcons: Record<string, React.ReactNode> = {
-  'low': <CheckCircle className="h-4 w-4 text-green-500" />,
-  'medium': <Clock className="h-4 w-4 text-amber-500" />,
-  'high': <AlertCircle className="h-4 w-4 text-red-500" />,
-  'critical': <AlertTriangle className="h-4 w-4 text-red-700" />,
+  'low': <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />,
+  'medium': <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />,
+  'high': <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
+  'critical': <AlertTriangle className="h-4 w-4 text-red-700 dark:text-red-500" />,
 };
 
 export default function TicketsPage() {
@@ -251,8 +263,6 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null);
   const [comments, setComments] = useState<Comment[]>(demoComments);
   const [clients, setClients] = useState<Client[]>(demoClients);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-
   useEffect(() => {
     // In a real app, you'd fetch data from an API
     // For this demo, we'll use the demo data
@@ -293,8 +303,6 @@ export default function TicketsPage() {
 
     setTickets([newTicket, ...tickets]);
     setActiveTickets([newTicket, ...activeTickets]);
-    setShowCreateForm(false);
-    setSelectedTicket(newTicket);
   };
 
   // Handler for adding a comment
@@ -348,12 +356,12 @@ export default function TicketsPage() {
       header: 'Ticket',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mr-3">
+          <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-3">
             <Ticket className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-medium text-gray-900">{row.original.title}</div>
-            <div className="text-sm text-gray-500">
+            <div className="font-medium text-gray-900 dark:text-foreground">{row.original.title}</div>
+            <div className="text-sm text-gray-500 dark:text-muted-foreground">
               {row.original.client}
             </div>
           </div>
@@ -389,7 +397,7 @@ export default function TicketsPage() {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }: any) => (
-        <div className="text-gray-500">
+        <div className="text-gray-500 dark:text-muted-foreground">
           {formatDistanceToNow(row.original.createdAt, { addSuffix: true })}
         </div>
       ),
@@ -407,7 +415,10 @@ export default function TicketsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setSelectedTicket(row.original)} className="cursor-pointer flex items-center">
+              <DropdownMenuItem 
+                onClick={() => setSelectedTicket(row.original)} 
+                className="cursor-pointer flex items-center"
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 <span>View details</span>
               </DropdownMenuItem>
@@ -416,6 +427,36 @@ export default function TicketsPage() {
                   <Pencil className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  setSelectedTicket(row.original);
+                  // The dialog will show the time entry form
+                }}
+                className="cursor-pointer flex items-center"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                <span>Log Time</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  // Mark ticket as complete
+                  const updatedTickets = tickets.map(t => 
+                    t.id === row.original.id ? { ...t, status: 'completed' as const } : t
+                  );
+                  setTickets(updatedTickets);
+                  
+                  // Update the filtered lists
+                  setCompletedTickets([
+                    ...completedTickets, 
+                    { ...row.original, status: 'completed' as const }
+                  ]);
+                  setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
+                }}
+                className="cursor-pointer flex items-center"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                <span>Complete</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -432,74 +473,44 @@ export default function TicketsPage() {
     },
   ];
 
-  // Widgets to display - either create ticket form or ticket details with comments/time logging
-  const widgetsContent = showCreateForm ? (
-    <TicketWidgetsCard
-      leftTitle="Create Ticket"
-      leftWidget={
-        <CreateTicketForm
-          clients={clients}
-          onCreateTicket={handleCreateTicket}
-        />
-      }
-      rightTitle="Recent Activity"
-      rightWidget={
-        <div className="text-gray-500 text-center py-8">
-          Select a ticket to view details and activity
-        </div>
-      }
-    />
-  ) : selectedTicket ? (
-    <TicketWidgetsCard
-      leftTitle="Comments & Activity"
-      leftWidget={
-        <TicketComments
-          ticketId={selectedTicket.id}
-          comments={comments}
-          onAddComment={handleAddComment}
-        />
-      }
-      rightTitle="Log Time"
-      rightWidget={
-        <TimeEntryForm
-          ticketId={selectedTicket.id}
-          clientId={selectedTicket.clientId}
-          onLogTime={handleLogTime}
-        />
-      }
-    />
-  ) : (
-    <TicketWidgetsCard
-      leftTitle="Ticket Details"
-      leftWidget={
-        <div className="text-gray-500 text-center py-8">
-          Select a ticket to view details
-        </div>
-      }
-      rightTitle="Log Time"
-      rightWidget={
-        <div className="text-gray-500 text-center py-8">
-          Select a ticket to log time
-        </div>
-      }
-    />
-  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Service Tickets</h1>
-        <Button onClick={() => {
-          setShowCreateForm(true);
-          setSelectedTicket(null);
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Ticket
-        </Button>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Service Tickets</h1>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Ticket
+            </Button>
+          </DialogTrigger>
+          <DialogContent 
+            className="sm:max-w-[600px] bg-white dark:bg-background text-card-foreground dark:text-card-foreground shadow-md
+            data-[state=open]:animate-in data-[state=closed]:animate-out
+            data-[state=open]:slide-in-from-top-2 data-[state=open]:slide-in-from-right-2
+            data-[state=closed]:slide-out-to-top-2 data-[state=closed]:slide-out-to-right-2
+            border border-border dark:border-border/20 rounded-lg"
+          >
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">Create New Ticket</DialogTitle>
+              <DialogDescription className="text-gray-700 dark:text-gray-300">
+                Fill in the details below to create a new service ticket.
+              </DialogDescription>
+            </DialogHeader>
+            <CreateTicketForm
+              clients={clients}
+              onCreateTicket={(data) => {
+                handleCreateTicket(data);
+                // Close dialog after submit (need to find the close button and click it)
+                document.querySelector('[aria-label="Close"]')?.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
-      
-      {/* Widgets area */}
-      {widgetsContent}
       
       {/* Tabs for ticket lists */}
       <Tabs defaultValue="active" value={selectedTab} onValueChange={setSelectedTab}>
@@ -526,6 +537,68 @@ export default function TicketsPage() {
           />
         </TabsContent>
       </Tabs>
+      
+      {/* Details Dialog */}
+      {selectedTicket && (
+        <Dialog open={!!selectedTicket} onOpenChange={(open) => {
+          if (!open) setSelectedTicket(null);
+        }}>
+          <DialogContent 
+            className="sm:max-w-[900px] bg-white dark:bg-background text-card-foreground dark:text-card-foreground shadow-md
+            data-[state=open]:animate-in data-[state=closed]:animate-out
+            data-[state=open]:slide-in-from-top-2 data-[state=open]:slide-in-from-right-2
+            data-[state=closed]:slide-out-to-top-2 data-[state=closed]:slide-out-to-right-2
+            border border-border dark:border-border/20 rounded-lg"
+          >
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">Ticket Details</DialogTitle>
+              <DialogDescription className="text-gray-700 dark:text-gray-300">
+                <span className="font-medium">{selectedTicket.title}</span>
+                <span className="text-sm ml-2">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[selectedTicket.status]}`}>
+                    {selectedTicket.status}
+                  </span>
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-lg font-medium flex items-center text-gray-800 dark:text-gray-200 mb-4">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Comments & Activity
+                </h3>
+                <TicketComments
+                  ticketId={selectedTicket.id}
+                  comments={comments}
+                  onAddComment={handleAddComment}
+                />
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium flex items-center text-gray-800 dark:text-gray-200 mb-4">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Log Time
+                </h3>
+                <TimeEntryForm
+                  ticketId={selectedTicket.id}
+                  clientId={selectedTicket.clientId}
+                  onLogTime={handleLogTime}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedTicket(null)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -77,7 +77,7 @@ export function DataTable<TData, TValue>({
   return (
     <Card className="w-full shadow-sm">
       <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-foreground">{title}</h2>
         
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <div className="w-full sm:w-auto flex-1 sm:flex-none">
@@ -139,20 +139,20 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
       
-      <div className="border-t border-gray-200">
+      <div className="border-t border-gray-200 dark:border-border">
         <div className="relative w-full overflow-auto">
           <table className="w-full caption-bottom text-sm">
-            <thead className="bg-gray-50 [&_tr]:border-b">
+            <thead className="bg-gray-50 dark:bg-transparent [&_tr]:border-b [&_tr]:dark:border-border">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr 
                   key={headerGroup.id}
-                  className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                  className="border-b dark:border-border transition-colors hover:bg-muted/50 dark:hover:bg-primary/5 data-[state=selected]:bg-muted"
                 >
                   {headerGroup.headers.map((header) => {
                     return (
                       <th 
                         key={header.id}
-                        className="h-12 px-4 text-left align-middle font-medium text-gray-500"
+                        className="h-12 px-4 text-left align-middle font-medium text-gray-500 dark:text-muted-foreground"
                       >
                         {header.isPlaceholder
                           ? null
@@ -171,7 +171,7 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-b border-gray-200 transition-colors hover:bg-gray-50"
+                    className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="p-4 align-middle">
@@ -182,7 +182,7 @@ export function DataTable<TData, TValue>({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="p-4 text-center text-gray-500">
+                  <td colSpan={columns.length} className="p-4 text-center text-gray-500 dark:text-muted-foreground">
                     No results found.
                   </td>
                 </tr>
@@ -192,8 +192,8 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
       
-      <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between">
-        <div className="flex-1 text-sm text-gray-500">
+      <div className="border-t border-gray-200 dark:border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex-1 text-sm text-gray-500 dark:text-muted-foreground">
           Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
           {Math.min(
             (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
