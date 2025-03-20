@@ -2,6 +2,7 @@ import { getUser, getClientSummary, getServiceTickets, getTimeTrackingSummary, g
 import { redirect } from 'next/navigation';
 import { StatCard } from './components/stat-card';
 import { SplitView } from './components/split-view';
+import { TimeLogsWidget } from './components/time-logs-widget';
 import { 
   Users, 
   Ticket, 
@@ -209,8 +210,11 @@ export default async function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Revenue Overview */}
-        <Card className="flex flex-col min-h-[350px] lg:min-h-[400px]">
+        {/* Time Logs Widget */}
+        <TimeLogsWidget />
+
+        {/* Revenue Overview - Move to the next row, full width on desktop */}
+        <Card className="flex flex-col min-h-[350px] lg:min-h-[400px] xl:col-span-2">
           <CardHeader className="pb-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium">Revenue Overview</CardTitle>

@@ -52,6 +52,7 @@ export function ClientCombobox({
             type="button"
             role="combobox"
             aria-expanded={open}
+            aria-controls="client-list"
             className="flex w-full items-center justify-between rounded-md border border-input bg-transparent h-9 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {selectedClient ? selectedClient.name : placeholder}
@@ -69,7 +70,7 @@ export function ClientCombobox({
               className="flex h-8 w-full rounded-md bg-transparent border-0 py-1 text-sm outline-none focus-visible:outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <div className="max-h-[300px] overflow-y-auto">
+          <div id="client-list" className="max-h-[300px] overflow-y-auto">
             {filteredClients.length === 0 ? (
               <div className="py-6 text-center text-sm">No client found.</div>
             ) : (

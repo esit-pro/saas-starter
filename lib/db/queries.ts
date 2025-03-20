@@ -201,6 +201,14 @@ export async function updateClient(clientId: number, clientData: Partial<Omit<ty
     .returning();
 }
 
+export async function deleteClient(clientId: number) {
+  // In production, consider using soft delete by setting a deletedAt timestamp
+  return await db
+    .delete(clients)
+    .where(eq(clients.id, clientId))
+    .returning();
+}
+
 // Service ticket queries
 
 export async function getServiceTickets(teamId: number, filters?: {
@@ -299,11 +307,52 @@ export async function updateServiceTicket(
     .returning();
 }
 
+export async function deleteServiceTicket(ticketId: number) {
+  // In production, consider using soft delete by setting a deletedAt timestamp
+  return await db
+    .delete(serviceTickets)
+    .where(eq(serviceTickets.id, ticketId))
+    .returning();
+}
+
 // Comment queries
 
-export async function getTicketComments(ticketId: number) {
-  return await db.query.ticketComments.findMany({
-    where: eq(ticketComments.ticketId, ticketId),
+/**
+ * Get all comments for a specific ticket
+ * @param ticketId - The ID of the ticket
+ * @param includeInternal - Whether to include internal comments (default: true)
+ * @param currentUserId - Optional: If provided, will include internal comments only if they belong to this user
+ */
+export async function getTicketComments(
+  ticketId: number,
+  includeInternal: boolean = true,
+  currentUserId?: number
+) {
+  // Base query setup
+  let query = db.query.ticketComments.findMany({
+    where: (commentTable, { eq, and, or }) => {
+      const baseCondition = eq(commentTable.ticketId, ticketId);
+      
+      if (!includeInternal) {
+        // Only public comments
+        return and(baseCondition, eq(commentTable.isInternal, false));
+      } else if (currentUserId !== undefined) {
+        // Public comments and internal comments by current user
+        return and(
+          baseCondition,
+          or(
+            eq(commentTable.isInternal, false),
+            and(
+              eq(commentTable.isInternal, true),
+              eq(commentTable.userId, currentUserId)
+            )
+          )
+        );
+      } else {
+        // All comments including all internal ones
+        return baseCondition;
+      }
+    },
     with: {
       user: {
         columns: {
@@ -315,6 +364,8 @@ export async function getTicketComments(ticketId: number) {
     },
     orderBy: desc(ticketComments.createdAt),
   });
+  
+  return query;
 }
 
 export async function createTicketComment(commentData: Omit<typeof ticketComments.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {

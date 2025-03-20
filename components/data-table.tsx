@@ -116,6 +116,12 @@ export const schema = z.object({
   reviewer: z.string(),
 })
 
+// Custom meta type for table
+type CustomTableMeta = {
+  handleDelete?: (id: number) => Promise<void>;
+  contextMenuItems?: React.ReactNode;
+};
+
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({
@@ -314,18 +320,56 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
-  })
+  });
+
+  // Get the actions column to use for the context menu
+  const actionsColumn = row.getVisibleCells().find(
+    cell => cell.column.id === "actions"
+  );
+  
+  // Function to render the context menu content
+  const renderContextMenu = (row: Row<z.infer<typeof schema>>) => {
+    if (actionsColumn) {
+      // Extract the dropdown menu items
+      const actionCell = actionsColumn.column.columnDef.cell;
+      
+      if (typeof actionCell === 'function') {
+        const ctx = actionsColumn.getContext();
+        
+        try {
+          // Get meta content if available
+          const meta = ctx.table.options.meta as CustomTableMeta | undefined;
+          
+          // If we have custom items in meta, use those
+          if (meta?.contextMenuItems) {
+            return meta.contextMenuItems;
+          }
+          
+          // Otherwise return our standard items directly
+          return [
+            <DropdownMenuItem key="edit">Edit</DropdownMenuItem>,
+            <DropdownMenuItem key="copy">Make a copy</DropdownMenuItem>,
+            <DropdownMenuItem key="favorite">Favorite</DropdownMenuItem>,
+            <DropdownMenuSeparator key="sep" />,
+            <DropdownMenuItem key="delete" variant="destructive">Delete</DropdownMenuItem>
+          ];
+        } catch (e) {
+          console.error('Error rendering context menu:', e);
+        }
+      }
+    }
+    return null;
+  };
 
   return (
     <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
       style={{
         transform: CSS.Transform.toString(transform),
-        transition: transition,
+        transition,
       }}
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
@@ -333,7 +377,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
         </TableCell>
       ))}
     </TableRow>
-  )
+  );
 }
 
 export function DataTable({

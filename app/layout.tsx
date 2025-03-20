@@ -8,8 +8,8 @@ import { ThemeScript } from '@/components/theme-script';
 import { ThemeEffect } from './theme-effect';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.',
+  title: 'ESIT Service Management',
+  description: 'ESIT Service Management',
 };
 
 export const viewport: Viewport = {

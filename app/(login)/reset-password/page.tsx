@@ -113,7 +113,7 @@ function ResetPasswordForm() {
                       ) : (
                         <span className="text-xs text-destructive flex items-center">
                           <AlertCircle className="h-3 w-3 mr-1" />
-                          Passwords don't match
+                          Passwords don&apos;t match
                         </span>
                       )
                     )}
@@ -203,7 +203,7 @@ function ResetPasswordForm() {
           <div className="relative z-20 mt-auto">
             <blockquote className="space-y-2">
               <p className="text-lg">
-                &ldquo;Our team's productivity improved dramatically after implementing this platform. We can now focus on solving problems instead of managing tickets.&rdquo;
+                &ldquo;Our team&apos;s productivity improved dramatically after implementing this platform. We can now focus on solving problems instead of managing tickets.&rdquo;
               </p>
               <footer className="text-sm">David Peterson, Technical Lead</footer>
             </blockquote>
@@ -264,7 +264,7 @@ function ResetPasswordForm() {
                           ) : (
                             <span className="text-xs text-destructive flex items-center">
                               <AlertCircle className="h-3 w-3 mr-1" />
-                              Passwords don't match
+                              Passwords don&apos;t match
                             </span>
                           )
                         )}
