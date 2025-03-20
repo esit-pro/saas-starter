@@ -105,7 +105,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { ContextMenuRow } from "@/components/ui/context-menu-row"
 
 export const schema = z.object({
   id: z.number(),
@@ -321,7 +320,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
-  })
+  });
 
   // Get the actions column to use for the context menu
   const actionsColumn = row.getVisibleCells().find(
@@ -363,25 +362,22 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   };
 
   return (
-    <ContextMenuRow
-      row={row}
-      renderContextMenu={renderContextMenu}
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
+    <TableRow
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
       style={{
         transform: CSS.Transform.toString(transform),
-        transition: transition,
+        transition,
       }}
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
-    </ContextMenuRow>
-  )
+    </TableRow>
+  );
 }
 
 export function DataTable({

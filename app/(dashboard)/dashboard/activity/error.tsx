@@ -32,7 +32,7 @@ export default function ActivityError({
               Something went wrong
             </h3>
             <p className="text-sm text-gray-500 max-w-sm mb-4">
-              We couldn't load your activity log. Please try again later.
+              We couldn&apos;t load your activity log. Please try again later.
             </p>
             <Button 
               onClick={reset}

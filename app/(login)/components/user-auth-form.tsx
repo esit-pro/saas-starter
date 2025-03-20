@@ -122,7 +122,7 @@ export function UserAuthForm({
                     ) : (
                       <span className="text-xs text-destructive flex items-center">
                         <AlertCircle className="h-3 w-3 mr-1" />
-                        Passwords don't match
+                        Passwords don&apos;t match
                       </span>
                     )
                   )}

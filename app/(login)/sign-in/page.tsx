@@ -34,7 +34,7 @@ export default function SignInPage() {
           </Link>
         </div>
         <div className="px-8 text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/sign-up" className="hover:text-brand underline underline-offset-4">
             Sign up
           </Link>
@@ -65,7 +65,7 @@ export default function SignInPage() {
           <div className="relative z-20 mt-auto">
             <blockquote className="space-y-2">
               <p className="text-lg">
-                &ldquo;This platform has streamlined our IT workflow, making service desk management effortless and increasing our team's productivity.&rdquo;
+                &ldquo;This platform has streamlined our IT workflow, making service desk management effortless and increasing our team&apos;s productivity.&rdquo;
               </p>
               <footer className="text-sm">Sarah Johnson, IT Director</footer>
             </blockquote>
@@ -89,7 +89,7 @@ export default function SignInPage() {
               </Link>
             </p>
             <p className="px-8 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/sign-up"
                 className="underline underline-offset-4 hover:text-primary"

@@ -4,6 +4,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint.js",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
@@ -57,6 +58,7 @@
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.5",
     "drizzle-orm": "^0.40.0",
+    "eslint": "^9.22.0",
     "framer-motion": "^12.5.0",
     "jose": "^6.0.8",
     "lucide-react": "^0.479.0",
@@ -82,6 +84,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "daisyui": "^5.0.6"
+    "daisyui": "^5.0.6",
+    "eslint-config-next": "^15.2.3"
   }
 }

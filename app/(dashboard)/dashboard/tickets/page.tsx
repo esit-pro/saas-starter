@@ -17,7 +17,12 @@ import {
   MessageSquare,
   DollarSign as DollarSignIcon,
   Paperclip as PaperclipIcon,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Users,
+  Circle as CircleIcon,
+  User,
+  DollarSign,
+  Paperclip
 } from 'lucide-react';
 import { SplitView } from '../../components/split-view';
 import { Label } from '@/components/ui/label';
@@ -50,6 +55,7 @@ import { CreateTicketForm } from '../../components/create-ticket-form';
 import { TicketComments } from '../../components/ticket-comments';
 import { TimeEntryForm } from '../../components/time-entry-form';
 import { ExpenseForm } from '../../components/expense-form';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Service Ticket type definition
 type ServiceTicket = {
@@ -74,6 +80,7 @@ type Client = {
 // Comment type
 type Comment = {
   id: number;
+  ticketId: number;
   content: string;
   createdAt: Date;
   isInternal: boolean;
@@ -225,6 +232,7 @@ const demoClients: Client[] = [
 const demoComments: Comment[] = [
   {
     id: 1,
+    ticketId: 1,
     content: 'Called the client and they reported that the website is down since this morning.',
     createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
     isInternal: false,
@@ -236,6 +244,7 @@ const demoComments: Comment[] = [
   },
   {
     id: 2,
+    ticketId: 1,
     content: 'Checked server logs, found spike in traffic before outage.',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     isInternal: true,
@@ -404,7 +413,14 @@ function TicketDetailPane({
   statusHistory: StatusChange[];
   onAddComment: (comment: { content: string; isInternal: boolean }) => void;
   onLogTime: (timeEntry: any) => void;
-  onAddExpense?: (expense: any) => void;
+  onAddExpense: (expense: { 
+    ticketId: number;
+    description: string;
+    amount: number;
+    category: string;
+    billable: boolean;
+    receiptUrl?: string;
+  }) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'activity' | 'time' | 'expenses'>('activity');
 
@@ -723,6 +739,103 @@ export default function TicketsPage() {
   const [expenses, setExpenses] = useState<Expense[]>(demoExpenses);
   const [statusHistory, setStatusHistory] = useState<StatusChange[]>(demoStatusHistory);
   const [clients, setClients] = useState<Client[]>(demoClients);
+
+  // Define a handler for row clicks
+  const handleRowClick = (row: any) => {
+    setSelectedTicket(row);
+  };
+  
+  // Create context menu items for the DataTable
+  const contextMenuItems = (row: any) => {
+    // Ensure row.original is available
+    if (!row?.original) {
+      console.error('Row original data missing in context menu');
+      return null;
+    }
+    
+    return (
+      <>
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Toggle selection - if already selected, deselect; otherwise select
+            setSelectedTicket(prev => prev?.id === row.original.id ? null : row.original);
+          }}
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          <span>View details</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
+            <Pencil className="mr-2 h-4 w-4" />
+            <span>Edit</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Select the ticket and show the time entry form
+            setSelectedTicket(row.original);
+          }}
+        >
+          <Clock className="mr-2 h-4 w-4" />
+          <span>Log Time</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Mark ticket as complete
+            const updatedTickets = tickets.map(t => 
+              t.id === row.original.id ? { ...t, status: 'completed' as const } : t
+            );
+            setTickets(updatedTickets);
+            
+            // Update the filtered lists
+            setCompletedTickets([
+              ...completedTickets, 
+              { ...row.original, status: 'completed' as const }
+            ]);
+            setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
+            
+            // Add a status change comment
+            handleAddComment({
+              content: `Status changed to completed`,
+              isInternal: true
+            });
+            
+            // Add a status change to history
+            const newStatusChange: StatusChange = {
+              id: statusHistory.length + 1,
+              ticketId: row.original.id,
+              status: 'completed',
+              timestamp: new Date(),
+              user: {
+                id: 1, // Current user ID
+                name: 'Jane Smith', // Current user name
+              }
+            };
+            setStatusHistory([newStatusChange, ...statusHistory]);
+          }}
+        >
+          <CheckCircle className="mr-2 h-4 w-4" />
+          <span>Complete</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
+          onClick={() => {
+            if (handleDeleteTicket) {
+              handleDeleteTicket(row.original.id);
+            }
+          }}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          <span>Delete</span>
+        </DropdownMenuItem>
+      </>
+    );
+  };
   useEffect(() => {
     // In a real app, you'd fetch data from an API
     // For this demo, we'll use the demo data
@@ -772,6 +885,7 @@ export default function TicketsPage() {
     // In a real app, you'd call an API to add the comment
     const newComment: Comment = {
       id: comments.length + 1,
+      ticketId: selectedTicket.id, // Add ticketId from the selected ticket
       content: comment.content,
       createdAt: new Date(),
       isInternal: comment.isInternal,
@@ -1081,6 +1195,8 @@ export default function TicketsPage() {
             searchPlaceholder="Search active tickets..."
             filterColumn="title"
             onDelete={handleDeleteTicket}
+            contextMenuItems={contextMenuItems}
+            onRowClick={handleRowClick}
           />
         </TabsContent>
         <TabsContent value="completed" className="mt-4">
@@ -1091,6 +1207,8 @@ export default function TicketsPage() {
             searchPlaceholder="Search completed tickets..."
             filterColumn="title"
             onDelete={handleDeleteTicket}
+            contextMenuItems={contextMenuItems}
+            onRowClick={handleRowClick}
           />
         </TabsContent>
       </Tabs>
@@ -1098,97 +1216,6 @@ export default function TicketsPage() {
   );
 
   // Conditionally render split view or just the table based on selection
-  // Create context menu items for the DataTable that match the dropdown menu
-  const contextMenuItems = (row: any) => {
-    // Ensure row.original is available
-    if (!row?.original) {
-      console.error('Row original data missing in context menu');
-      return null;
-    }
-    
-    return (
-      <>
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Toggle selection - if already selected, deselect; otherwise select
-            setSelectedTicket(prev => prev?.id === row.original.id ? null : row.original);
-          }}
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          <span>View details</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Edit</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Select the ticket and show the time entry form
-            setSelectedTicket(row.original);
-          }}
-        >
-          <Clock className="mr-2 h-4 w-4" />
-          <span>Log Time</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Mark ticket as complete
-            const updatedTickets = tickets.map(t => 
-              t.id === row.original.id ? { ...t, status: 'completed' as const } : t
-            );
-            setTickets(updatedTickets);
-            
-            // Update the filtered lists
-            setCompletedTickets([
-              ...completedTickets, 
-              { ...row.original, status: 'completed' as const }
-            ]);
-            setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
-            
-            // Add a status change comment
-            handleAddComment({
-              content: `Status changed to completed`,
-              isInternal: true
-            });
-            
-            // Add a status change to history
-            const newStatusChange: StatusChange = {
-              id: statusHistory.length + 1,
-              ticketId: row.original.id,
-              status: 'completed',
-              timestamp: new Date(),
-              user: {
-                id: 1, // Current user ID
-                name: 'Jane Smith', // Current user name
-              }
-            };
-            setStatusHistory([newStatusChange, ...statusHistory]);
-          }}
-        >
-          <CheckCircle className="mr-2 h-4 w-4" />
-          <span>Complete</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
-          onClick={() => {
-            if (handleDeleteTicket) {
-              handleDeleteTicket(row.original.id);
-            }
-          }}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          <span>Delete</span>
-        </DropdownMenuItem>
-      </>
-    );
-  };
 
   // Update the DataTable components to include context menu items
   const activeTicketsTable = (
@@ -1200,6 +1227,7 @@ export default function TicketsPage() {
       filterColumn="title"
       onDelete={handleDeleteTicket}
       contextMenuItems={contextMenuItems}
+      onRowClick={handleRowClick}
     />
   );
 
@@ -1212,6 +1240,7 @@ export default function TicketsPage() {
       filterColumn="title"
       onDelete={handleDeleteTicket}
       contextMenuItems={contextMenuItems}
+      onRowClick={handleRowClick}
     />
   );
 
@@ -1270,25 +1299,46 @@ export default function TicketsPage() {
     </div>
   );
 
-  return selectedTicket ? (
-    <SplitView 
-      left={updatedTicketsView} 
-      right={
-        <TicketDetailPane 
-          ticket={selectedTicket} 
-          comments={filteredComments}
-          timeEntries={filteredTimeEntries}
-          expenses={filteredExpenses}
-          statusHistory={filteredStatusHistory}
-          onAddComment={handleAddComment}
-          onLogTime={handleLogTime}
-          onAddExpense={handleAddExpense}
-        />
-      } 
-      leftWidth="3fr"
-      rightWidth="2fr"
-    />
-  ) : (
-    updatedTicketsView
+  return (
+    <div className="relative">
+      {updatedTicketsView}
+      <AnimatePresence>
+        {selectedTicket && (
+          <motion.div 
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="absolute top-0 right-0 bottom-0 w-2/5 bg-white dark:bg-background border-l dark:border-border shadow-lg overflow-auto"
+            style={{ zIndex: 10 }}
+          >
+            <div className="flex justify-between items-center p-4 border-b dark:border-border">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Ticket Details</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedTicket(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+            <div className="p-4">
+              <TicketDetailPane 
+                ticket={selectedTicket}
+                comments={comments.filter(c => c.ticketId === selectedTicket.id)}
+                timeEntries={timeEntries.filter(t => t.ticketId === selectedTicket.id)}
+                expenses={expenses.filter(e => e.ticketId === selectedTicket.id)}
+                statusHistory={statusHistory.filter(s => s.ticketId === selectedTicket.id)}
+                onAddComment={handleAddComment}
+                onLogTime={handleLogTime}
+                onAddExpense={handleAddExpense}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

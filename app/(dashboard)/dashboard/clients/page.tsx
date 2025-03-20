@@ -14,6 +14,7 @@ import {
   Plus,
   Calendar as CalendarIcon,
   File as FileIcon,
+  X,
 } from 'lucide-react';
 import { SplitView } from '../../components/split-view';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Client type definition
 type Client = {
@@ -630,8 +632,8 @@ export default function ClientsPage() {
   const selectedClient = clients.find(client => client.id === selectedClientId) || null;
 
   // Update click handler for row actions
-  const handleRowClick = (clientId: number) => {
-    setSelectedClientId(clientId);
+  const handleRowClick = (client: Client) => {
+    setSelectedClientId(client.id);
   };
 
   // Update the "View details" action to handle clicking
@@ -691,6 +693,7 @@ export default function ClientsPage() {
       filterColumn="name"
       onDelete={handleDeleteClient}
       contextMenuItems={contextMenuItems}
+      onRowClick={handleRowClick}
     />
   );
 
@@ -737,14 +740,37 @@ export default function ClientsPage() {
   );
 
   // Conditionally render split view or just the table based on selection
-  return selectedClientId ? (
-    <SplitView 
-      left={tableView} 
-      right={<ClientDetailPane client={selectedClient} />} 
-      leftWidth="3fr"
-      rightWidth="2fr"
-    />
-  ) : (
-    tableView
+  return (
+    <div className="relative">
+      {tableView}
+      <AnimatePresence>
+        {selectedClientId && (
+          <motion.div 
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="absolute top-0 right-0 bottom-0 w-2/5 bg-white dark:bg-background border-l dark:border-border shadow-lg overflow-auto"
+            style={{ zIndex: 10 }}
+          >
+            <div className="flex justify-between items-center p-4 border-b dark:border-border">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Client Details</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedClientId(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+            <div className="p-4">
+              <ClientDetailPane client={selectedClient} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

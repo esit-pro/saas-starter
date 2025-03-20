@@ -45,12 +45,14 @@ interface DataTableProps<TData, TValue> {
   filterColumn?: string;
   onDelete?: (id: number) => Promise<void>;
   contextMenuItems?: React.ReactNode | ((row: any) => React.ReactNode);
+  onRowClick?: (row: TData) => void;
 }
 
 // Expand table meta with custom properties
 type CustomTableMeta = {
   handleDelete?: (id: number) => Promise<void>;
   contextMenuItems?: React.ReactNode | ((row: any) => React.ReactNode);
+  onRowClick?: (row: any) => void;
 };
 
 export function DataTable<TData extends { id: number }, TValue>({
@@ -62,6 +64,7 @@ export function DataTable<TData extends { id: number }, TValue>({
   filterColumn = 'name',
   onDelete,
   contextMenuItems,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -107,7 +110,8 @@ export function DataTable<TData extends { id: number }, TValue>({
     meta: {
       handleDelete, // Make the delete handler available to cell renderers
       contextMenuItems, // Add context menu items to meta
-    } as CustomTableMeta,
+      onRowClick, // Add row click handler to meta
+    } as any,
   });
 
   return (
@@ -218,7 +222,7 @@ export function DataTable<TData extends { id: number }, TValue>({
                     // Get the context menu content for the row
                     const renderContextMenu = (row: any) => {
                       // Get context menu items from table meta
-                      const meta = table.options.meta as CustomTableMeta | undefined;
+                      const meta = table.options.meta as any;
                       if (meta?.contextMenuItems) {
                         try {
                           // If it's a function, call it with the row
@@ -260,7 +264,17 @@ export function DataTable<TData extends { id: number }, TValue>({
                             transition: { duration: 0.3 }
                           }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5"
+                          className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer"
+                          onClick={(e) => {
+                            // Stop the event from propagating up and causing a redirect
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // If there's a row click handler in meta, use it
+                            if (onRowClick) {
+                              onRowClick(row.original);
+                            }
+                          }}
                         >
                           {row.getVisibleCells().map((cell) => (
                             <motion.td 
