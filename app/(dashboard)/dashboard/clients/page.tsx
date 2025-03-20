@@ -509,7 +509,7 @@ export default function ClientsPage() {
       header: 'Client Name',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-3">
+          <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-3 flex-shrink-0">
             <Users className="h-4 w-4" />
           </div>
           <div>
@@ -581,7 +581,7 @@ export default function ClientsPage() {
     {
       id: 'actions',
       cell: ({ row, table }: any) => (
-        <div className="text-right">
+        <div className="flex justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -710,11 +710,11 @@ export default function ClientsPage() {
             </Button>
           </DialogTrigger>
           <DialogContent 
-            className="sm:max-w-[600px] bg-white dark:bg-background text-card-foreground dark:text-card-foreground shadow-md
+            className="sm:max-w-[600px] bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md text-card-foreground dark:text-card-foreground shadow-md
             data-[state=open]:animate-in data-[state=closed]:animate-out
             data-[state=open]:slide-in-from-top-2 data-[state=open]:slide-in-from-right-2
             data-[state=closed]:slide-out-to-top-2 data-[state=closed]:slide-out-to-right-2
-            border border-border dark:border-border/20 rounded-lg"
+            border border-border dark:border-border/40 rounded-lg"
           >
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-gray-100">Create New Client</DialogTitle>
@@ -750,7 +750,7 @@ export default function ClientsPage() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="absolute top-0 right-0 bottom-0 w-2/5 bg-white dark:bg-background border-l dark:border-border shadow-lg overflow-auto"
+            className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
             style={{ zIndex: 10 }}
           >
             <div className="flex justify-between items-center p-4 border-b dark:border-border">

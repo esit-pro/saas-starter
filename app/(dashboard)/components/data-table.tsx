@@ -181,7 +181,7 @@ export function DataTable<TData extends { id: number }, TValue>({
       
       <div className="border-t border-gray-200 dark:border-border">
         <div className="table-container">
-          <table className="caption-bottom text-sm">
+          <table className="w-full table-auto">
             <thead className="bg-gray-50 dark:bg-transparent [&_tr]:border-b [&_tr]:dark:border-border">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr 
@@ -192,7 +192,9 @@ export function DataTable<TData extends { id: number }, TValue>({
                     return (
                       <th 
                         key={header.id}
-                        className="h-12 px-4 text-left align-middle font-medium text-gray-500 dark:text-muted-foreground"
+                        className={`h-12 px-4 align-middle font-medium text-gray-500 dark:text-muted-foreground ${
+                          header.id === 'actions' ? 'text-right w-[60px]' : 'text-left'
+                        }`}
                       >
                         {header.isPlaceholder
                           ? null
@@ -280,9 +282,13 @@ export function DataTable<TData extends { id: number }, TValue>({
                             <motion.td 
                               layout
                               key={cell.id} 
-                              className="p-4 align-middle"
+                              className={`p-4 align-middle whitespace-nowrap ${
+                                cell.column.id === 'actions' ? 'text-right w-[60px]' : ''
+                              }`}
                             >
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              <div className={`${cell.column.id === 'actions' ? 'flex justify-end' : 'flex items-center min-w-0'}`}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
                             </motion.td>
                           ))}
                         </motion.tr>

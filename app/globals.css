@@ -208,11 +208,11 @@
 */
 
 .dark {
-  --background: hsl(240 10% 3.9%);
+  --background: hsl(240, 10%, 4%);
   --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
+  --card: hsl(240, 10%, 4%);
   --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
+  --popover: hsl(240, 10%, 4%);
   --popover-foreground: hsl(0 0% 98%);
   --primary: hsl(0 0% 98%);
   --primary-foreground: hsl(240 5.9% 10%);
@@ -299,7 +299,7 @@
   
   /* Global table styles for horizontal scrolling instead of line breaks */
   table {
-    @apply min-w-full w-max;
+    @apply min-w-full table-auto;
   }
   
   .table-container {
@@ -308,5 +308,15 @@
   
   table td, table th {
     @apply whitespace-nowrap;
+  }
+  
+  /* Column sizing for better space usage */
+  .table-auto th:not(.w-\[60px\]) {
+    @apply w-auto;
+  }
+  
+  /* Prevent avatars and icons from being squished */
+  .h-9.w-9 {
+    @apply flex-shrink-0 min-w-9 min-h-9;
   }
 }
