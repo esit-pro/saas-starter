@@ -52,6 +52,8 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
 import { z } from "zod"
+import { AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
@@ -147,6 +149,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     id: "drag",
     header: () => null,
     cell: ({ row }) => <DragHandle id={row.original.id} />,
+    size: 40,
+    enableHiding: false,
   },
   {
     id: "select",
@@ -173,6 +177,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 40,
   },
   {
     accessorKey: "header",
@@ -322,61 +327,46 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
     id: row.original.id,
   });
 
-  // Get the actions column to use for the context menu
-  const actionsColumn = row.getVisibleCells().find(
-    cell => cell.column.id === "actions"
-  );
-  
-  // Function to render the context menu content
-  const renderContextMenu = (row: Row<z.infer<typeof schema>>) => {
-    if (actionsColumn) {
-      // Extract the dropdown menu items
-      const actionCell = actionsColumn.column.columnDef.cell;
-      
-      if (typeof actionCell === 'function') {
-        const ctx = actionsColumn.getContext();
-        
-        try {
-          // Get meta content if available
-          const meta = ctx.table.options.meta as CustomTableMeta | undefined;
-          
-          // If we have custom items in meta, use those
-          if (meta?.contextMenuItems) {
-            return meta.contextMenuItems;
-          }
-          
-          // Otherwise return our standard items directly
-          return [
-            <DropdownMenuItem key="edit">Edit</DropdownMenuItem>,
-            <DropdownMenuItem key="copy">Make a copy</DropdownMenuItem>,
-            <DropdownMenuItem key="favorite">Favorite</DropdownMenuItem>,
-            <DropdownMenuSeparator key="sep" />,
-            <DropdownMenuItem key="delete" variant="destructive">Delete</DropdownMenuItem>
-          ];
-        } catch (e) {
-          console.error('Error rendering context menu:', e);
-        }
-      }
-    }
-    return null;
-  };
-
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
+    <div className="relative w-full">
+      {/* Delete button container - positioned as an overlay */}
+      <div 
+        className="absolute inset-0 flex items-center justify-end bg-red-500 text-white"
+        style={{ 
+          opacity: isDragging ? 0 : undefined,
+          zIndex: -1
+        }}
+      >
+        <div className="px-4">Delete</div>
+      </div>
+
+      <TableRow
+        ref={setNodeRef}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+          position: 'relative',
+          zIndex: 1,
+          backgroundColor: 'var(--background)',
+          width: '100%'
+        }}
+        data-state={row.getIsSelected() && "selected"}
+        data-dragging={isDragging}
+      >
+        {row.getVisibleCells().map((cell) => (
+          <TableCell 
+            key={cell.id}
+            style={{
+              // Ensure cells maintain their width during deletion
+              width: cell.column.getSize(),
+              minWidth: cell.column.getSize(),
+            }}
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    </div>
   );
 }
 
@@ -535,7 +525,11 @@ export function DataTable({
               <TableHeader className="bg-muted sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
+                    <TableHead className="w-8">
+                      {/* Intentionally empty for drag handle column */}
+                    </TableHead>
                     {headerGroup.headers.map((header) => {
+                      if (header.id === 'drag') return null;
                       return (
                         <TableHead key={header.id} colSpan={header.colSpan}>
                           {header.isPlaceholder
@@ -556,9 +550,25 @@ export function DataTable({
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
                   >
-                    {table.getRowModel().rows.map((row) => (
-                      <DraggableRow key={row.id} row={row} />
-                    ))}
+                    <AnimatePresence mode="popLayout">
+                      {table.getRowModel().rows.map((row) => (
+                        <motion.div
+                          key={row.id}
+                          initial={{ x: 0, opacity: 1 }}
+                          exit={{ 
+                            x: "-100%",
+                            opacity: 0,
+                            transition: {
+                              duration: 0.3,
+                              ease: "easeInOut"
+                            }
+                          }}
+                          layout
+                        >
+                          <DraggableRow row={row} />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </SortableContext>
                 ) : (
                   <TableRow>
