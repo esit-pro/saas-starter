@@ -21,6 +21,7 @@ interface ClientComboboxProps {
   selectedClientId: number | null;
   onClientChange: (clientId: number) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function ClientCombobox({
@@ -28,6 +29,7 @@ export function ClientCombobox({
   selectedClientId,
   onClientChange,
   placeholder = 'Select client...',
+  disabled = false,
 }: ClientComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -54,6 +56,7 @@ export function ClientCombobox({
             aria-expanded={open}
             aria-controls="client-list"
             className="flex w-full items-center justify-between rounded-md border border-input bg-white dark:bg-zinc-800 h-9 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            disabled={disabled}
           >
             {selectedClient ? selectedClient.name : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

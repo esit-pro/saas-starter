@@ -24,6 +24,15 @@ import {
   DollarSign,
   Paperclip
 } from 'lucide-react';
+import { 
+  getTicketsForTeam, 
+  getTicketById, 
+  createTicket, 
+  updateTicket, 
+  deleteTicket, 
+  getClientsForSelection, 
+  getTeamMembersForAssignment 
+} from './actions';
 import { SplitView } from '../../components/split-view';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -64,8 +73,8 @@ type ServiceTicket = {
   client: string;
   clientId: number;
   assignedTo: string;
-  status: 'open' | 'in-progress' | 'on-hold' | 'completed' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: string; // Allow any string from the database
+  priority: string; // Allow any string from the database
   category: string;
   createdAt: Date;
   dueDate: Date | null;
@@ -402,7 +411,6 @@ function TicketDetailPane({
   timeEntries, 
   expenses, 
   statusHistory,
-  onAddComment,
   onLogTime,
   onAddExpense
 }: { 
@@ -411,7 +419,6 @@ function TicketDetailPane({
   timeEntries: TimeEntry[];
   expenses: Expense[];
   statusHistory: StatusChange[];
-  onAddComment: (comment: { content: string; isInternal: boolean }) => void;
   onLogTime: (timeEntry: any) => void;
   onAddExpense: (expense: { 
     ticketId: number;
@@ -575,7 +582,6 @@ function TicketDetailPane({
                 <TicketComments
                   ticketId={ticket.id}
                   comments={comments}
-                  onAddComment={onAddComment}
                 />
               </div>
             </div>
@@ -837,15 +843,31 @@ export default function TicketsPage() {
     );
   };
   useEffect(() => {
-    // In a real app, you'd fetch data from an API
-    // For this demo, we'll use the demo data
-    setTickets(demoTickets);
-    setActiveTickets(demoTickets.filter(t => 
-      t.status === 'open' || t.status === 'in-progress' || t.status === 'on-hold'
-    ));
-    setCompletedTickets(demoTickets.filter(t => 
-      t.status === 'completed' || t.status === 'closed'
-    ));
+    // Fetch tickets from the server
+    async function fetchTickets() {
+      try {
+        const result = await getTicketsForTeam();
+        
+        if (result.error) {
+          console.error('Error fetching tickets:', result.error);
+          return;
+        }
+        
+        if (result.tickets) {
+          setTickets(result.tickets);
+          setActiveTickets(result.tickets.filter(t => 
+            t.status === 'open' || t.status === 'in-progress' || t.status === 'on-hold'
+          ));
+          setCompletedTickets(result.tickets.filter(t => 
+            t.status === 'completed' || t.status === 'closed'
+          ));
+        }
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+      }
+    }
+    
+    fetchTickets();
   }, []);
 
   // Handler for adding a new ticket
@@ -1336,7 +1358,6 @@ export default function TicketsPage() {
                 timeEntries={timeEntries.filter(t => t.ticketId === selectedTicket.id)}
                 expenses={expenses.filter(e => e.ticketId === selectedTicket.id)}
                 statusHistory={statusHistory.filter(s => s.ticketId === selectedTicket.id)}
-                onAddComment={handleAddComment}
                 onLogTime={handleLogTime}
                 onAddExpense={handleAddExpense}
               />

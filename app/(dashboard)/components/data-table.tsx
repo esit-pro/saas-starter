@@ -46,6 +46,7 @@ interface DataTableProps<TData, TValue> {
   onDelete?: (id: number) => Promise<void>;
   contextMenuItems?: React.ReactNode | ((row: any) => React.ReactNode);
   onRowClick?: (row: TData) => void;
+  isLoading?: boolean;
 }
 
 // Expand table meta with custom properties
@@ -65,6 +66,7 @@ export function DataTable<TData extends { id: number }, TValue>({
   onDelete,
   contextMenuItems,
   onRowClick,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -248,7 +250,16 @@ export function DataTable<TData extends { id: number }, TValue>({
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               <LayoutGroup>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={columns.length} className="p-4 text-center">
+                      <div className="flex justify-center items-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="ml-3 text-gray-500 dark:text-muted-foreground">Loading...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : table.getRowModel().rows?.length ? (
                   <AnimatePresence initial={false} mode="popLayout">
                     {table.getRowModel().rows.map((row) => {
                       const rowData = row.original as TData;

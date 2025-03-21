@@ -4,13 +4,34 @@
 - `pnpm dev` - Run development server with Turbopack
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
-- `pnpm db:setup` - Set up environment variables
+- `pnpm db:setup` - Set up environment variables and initialize Postgres
 - `pnpm db:migrate` - Run database migrations
 - `pnpm db:seed` - Seed the database with test data
 - `pnpm db:generate` - Generate database migrations
 - `pnpm db:studio` - Launch Drizzle Studio
 - `npx next lint` - Run ESLint for code linting
 - `npx tsc --noEmit` - Run TypeScript checker
+
+## Database Migration Process
+1. **Set up PostgreSQL**:
+   - Run `pnpm db:setup` to configure your environment
+   - Choose between local Docker Postgres instance or a remote database
+   - The script will create your `.env` file with the Postgres connection string
+
+2. **Initialize the Database**:
+   - Run `node lib/db/init-db.ts` to create the database schema
+   - This creates all necessary tables based on the Drizzle schema definitions
+   - A test team and client will be created for development purposes
+
+3. **Run Migrations** (when schema changes):
+   - After modifying `schema.ts`, run `pnpm db:generate` to create migration files
+   - Run `pnpm db:migrate` to apply migrations to your database
+   - View your database with `pnpm db:studio` to verify changes
+
+4. **Database Environment Variables**:
+   - `POSTGRES_URL` - Main connection string (required)
+   - Docker default: `postgres://postgres:postgres@localhost:54322/postgres`
+   - App database: `postgres://esitdev:21c2692af7b8b48f33bb3ba6c4b1ea8a@localhost:54322/esit_service_db`
 
 ## Code Style Guidelines
 - **Project Structure**: Next.js app router with organized folders for components, lib, and app routes
@@ -36,6 +57,23 @@
 - **Component Design**: Components use Radix UI primitives customized with Tailwind
   - Form controls, dialogs, and interactive elements follow shadcn/ui principles
 
+## Data Interaction Components
+- **Form Components**: All form components use React's server actions for data submission
+  - Forms typically call type-safe actions from respective `actions.ts` files
+  - Use `useOptimistic` hook for immediate UI updates before server response
+  - Include proper loading states with disabled inputs during submission
+
+- **TicketComments**: Implements real-time comments with optimistic updates
+  - Uses `addTicketComment` server action from `tickets/actions.ts`
+  - Displays comments with formatting based on internal/external status
+  - Shows relative time using `formatDistanceToNow` from `date-fns`
+  - Maintains scroll position in comment history
+
+- **Data Tables**: Interactive tables with real-time data
+  - Fetches data from server actions in the respective module
+  - Implements client-side sorting, filtering, and pagination
+  - Uses strong typing with TypeScript interfaces aligned with database schema
+
 ## Layout Patterns
 - **Dashboard Layout**: Responsive dashboard with modern sidebar navigation
   - Main sidebar includes all navigation including settings links
@@ -58,3 +96,21 @@
 - Radix UI primitives
 - Lucide React icons
 - Stripe for payment processing
+
+## TypeScript Type Safety Patterns
+- **Common Type Issues**:
+  - Handle potential null values with optional chaining (`item.client?.name`) and nullish coalescing (`|| 'default'`)
+  - Use type assertions (`as number`) for Drizzle ORM parameters when TypeScript can't infer non-null values
+  - Properly define component props interfaces with optional properties (`disabled?: boolean`)
+  - Convert numeric values to strings for decimal DB fields (`amount.toString()`)
+
+- **Server Actions**:
+  - Server actions use Zod for runtime validation
+  - Prefer strongly-typed parameters in server action functions
+  - Return objects with consistent shape (e.g., `{ success: string }` or `{ error: string }`)
+  - Handle both optimistic client-side updates and server validation
+
+- **Component Props**:
+  - Define clear interfaces for component props
+  - Use generic types for reusable components
+  - Ensure form components properly handle loading and disabled states

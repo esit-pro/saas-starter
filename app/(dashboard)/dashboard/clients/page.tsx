@@ -15,6 +15,7 @@ import {
   Calendar as CalendarIcon,
   File as FileIcon,
   X,
+  Loader2,
 } from 'lucide-react';
 import { SplitView } from '../../components/split-view';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { DataTable } from '../../components/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Dialog,
   DialogContent,
@@ -42,157 +44,56 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Client type definition
-type Client = {
-  id: number;
-  name: string;
-  contactName: string;
-  email: string;
-  phone: string;
-  isActive: boolean;
-  createdAt: Date;
-};
-
-// Demo data
-const demoClients: Client[] = [
-  {
-    id: 1,
-    name: 'Acme Corporation',
-    contactName: 'John Doe',
-    email: 'john@acme.com',
-    phone: '(555) 123-4567',
-    isActive: true,
-    createdAt: new Date(2023, 1, 15),
-  },
-  {
-    id: 2,
-    name: 'Globex Inc',
-    contactName: 'Jane Smith',
-    email: 'jane@globex.com',
-    phone: '(555) 987-6543',
-    isActive: true,
-    createdAt: new Date(2023, 3, 22),
-  },
-  {
-    id: 3,
-    name: 'Wayne Enterprises',
-    contactName: 'Bruce Wayne',
-    email: 'bruce@wayne.com',
-    phone: '(555) 333-7777',
-    isActive: true,
-    createdAt: new Date(2023, 5, 10),
-  },
-  {
-    id: 4,
-    name: 'Stark Industries',
-    contactName: 'Tony Stark',
-    email: 'tony@stark.com',
-    phone: '(555) 444-8888',
-    isActive: true,
-    createdAt: new Date(2023, 6, 5),
-  },
-  {
-    id: 5,
-    name: 'Oscorp',
-    contactName: 'Norman Osborn',
-    email: 'norman@oscorp.com',
-    phone: '(555) 555-9999',
-    isActive: false,
-    createdAt: new Date(2023, 2, 18),
-  },
-  {
-    id: 6,
-    name: 'Umbrella Corporation',
-    contactName: 'Albert Wesker',
-    email: 'albert@umbrella.com',
-    phone: '(555) 666-1111',
-    isActive: false,
-    createdAt: new Date(2023, 4, 30),
-  },
-  {
-    id: 7,
-    name: 'Cyberdyne Systems',
-    contactName: 'Miles Dyson',
-    email: 'miles@cyberdyne.com',
-    phone: '(555) 777-2222',
-    isActive: true,
-    createdAt: new Date(2023, 7, 12),
-  },
-  {
-    id: 8,
-    name: 'LexCorp',
-    contactName: 'Lex Luthor',
-    email: 'lex@lexcorp.com',
-    phone: '(555) 888-3333',
-    isActive: true,
-    createdAt: new Date(2023, 8, 25),
-  },
-  {
-    id: 9,
-    name: 'Weyland-Yutani Corp',
-    contactName: 'Ellen Ripley',
-    email: 'ripley@weylandyutani.com',
-    phone: '(555) 999-4444',
-    isActive: true,
-    createdAt: new Date(2023, 9, 17),
-  },
-  {
-    id: 10,
-    name: 'Tyrell Corporation',
-    contactName: 'Eldon Tyrell',
-    email: 'eldon@tyrell.com',
-    phone: '(555) 000-5555',
-    isActive: false,
-    createdAt: new Date(2023, 10, 8),
-  },
-  {
-    id: 11,
-    name: 'Aperture Science',
-    contactName: 'Cave Johnson',
-    email: 'cave@aperture.com',
-    phone: '(555) 111-6666',
-    isActive: true,
-    createdAt: new Date(2023, 11, 3),
-  },
-  {
-    id: 12,
-    name: 'Black Mesa',
-    contactName: 'Gordon Freeman',
-    email: 'gordon@blackmesa.com',
-    phone: '(555) 222-7777',
-    isActive: true,
-    createdAt: new Date(2024, 0, 20),
-  },
-];
+import { toast } from 'sonner';
+import { getClientsForTeam, createClient, updateClient, deleteClient } from './actions';
+import { Client } from '@/lib/db/schema';
 
 // Create Client Form component
-function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Client, 'id' | 'createdAt'>) => void }) {
+function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'teamId'>) => void }) {
   const [name, setName] = useState('');
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    if (!name.trim() || !contactName.trim() || !email.trim()) return;
-    
-    onCreateClient({
-      name,
-      contactName,
-      email,
-      phone,
-      isActive
-    });
-    
-    // Reset form
-    setName('');
-    setContactName('');
-    setEmail('');
-    setPhone('');
-    setIsActive(true);
+    try {
+      if (!name.trim() || !contactName.trim() || !email.trim()) {
+        toast.error('Please fill in all required fields');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      await onCreateClient({
+        name,
+        contactName,
+        email,
+        phone,
+        address,
+        notes,
+        isActive
+      });
+      
+      // Reset form
+      setName('');
+      setContactName('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+      setNotes('');
+      setIsActive(true);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast.error('Failed to create client');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -200,7 +101,7 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6">
           <div className="grid gap-2">
-            <Label htmlFor="name">Company Name</Label>
+            <Label htmlFor="name">Company Name <span className="text-red-500">*</span></Label>
             <Input
               id="name"
               value={name}
@@ -211,7 +112,7 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="contactName">Contact Person</Label>
+            <Label htmlFor="contactName">Contact Person <span className="text-red-500">*</span></Label>
             <Input
               id="contactName"
               value={contactName}
@@ -222,7 +123,7 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
             <Input
               id="email"
               type="email"
@@ -243,6 +144,28 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
             />
           </div>
           
+          <div className="grid gap-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Business St, Suite 101, City, State, ZIP"
+              rows={3}
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any additional information about this client..."
+              rows={3}
+            />
+          </div>
+          
           <div className="flex items-center space-x-2">
             <Switch 
               id="isActive" 
@@ -252,8 +175,20 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
             <Label htmlFor="isActive" className="font-normal">Active Client</Label>
           </div>
           
-          <Button type="submit" className="w-full" variant="form" disabled={!name.trim() || !contactName.trim() || !email.trim()}>
-            Create Client
+          <Button 
+            type="submit" 
+            className="w-full" 
+            variant="form" 
+            disabled={isSubmitting || !name.trim() || !contactName.trim() || !email.trim()}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Client'
+            )}
           </Button>
         </div>
       </form>
@@ -302,7 +237,7 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 )}
               </div>
               <div className="flex items-center">
-                <span>Created {formatDistanceToNow(client.createdAt, { addSuffix: true })}</span>
+                <span>Created {formatDistanceToNow(new Date(client.createdAt), { addSuffix: true })}</span>
               </div>
             </div>
           </div>
@@ -332,7 +267,7 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Phone</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">{client.phone}</div>
+                  <div className="font-medium text-gray-900 dark:text-foreground">{client.phone || 'Not provided'}</div>
                 </div>
               </div>
               <div className="flex items-center">
@@ -368,7 +303,7 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Client Since</div>
                   <div className="font-medium text-gray-900 dark:text-foreground">
-                    {client.createdAt.toLocaleDateString()}
+                    {new Date(client.createdAt).toLocaleDateString()}
                   </div>
                 </div>
               </div>
@@ -377,9 +312,9 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                   <FileIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Contracts</div>
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Address</div>
                   <div className="font-medium text-gray-900 dark:text-foreground">
-                    3 Active Contracts
+                    {client.address || 'Not provided'}
                   </div>
                 </div>
               </div>
@@ -387,77 +322,15 @@ function ClientDetailPane({ client }: { client: Client | null }) {
           </div>
         </div>
 
-        {/* Activity Timeline */}
-        <div className="border dark:border-border rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Recent Activity</h3>
-          
-          <div className="space-y-6">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="relative pl-6 pb-6 border-l dark:border-border">
-                <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-blue-500"></div>
-                <div className="text-sm text-gray-500 dark:text-muted-foreground">
-                  {formatDistanceToNow(
-                    new Date(client.createdAt.getTime() - i * 86400000 * (i+1)),
-                    { addSuffix: true }
-                  )}
-                </div>
-                <div className="font-medium text-gray-900 dark:text-foreground mt-1">
-                  {i === 0 && "Invoice #INV-2023-005 sent"}
-                  {i === 1 && "Payment received for #INV-2023-004"}
-                  {i === 2 && "Support ticket #ST-2023-021 closed"}
-                  {i === 3 && "Meeting scheduled with sales team"}
-                  {i === 4 && "Client onboarding completed"}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
-                  {i === 0 && "Invoice for $2,500.00 was sent via email"}
-                  {i === 1 && "Payment of $1,750.00 received via bank transfer"}
-                  {i === 2 && "Issue with login access was resolved"}
-                  {i === 3 && "Scheduled for next Tuesday at 10:00 AM"}
-                  {i === 4 && "All setup procedures have been completed"}
-                </div>
-              </div>
-            ))}
+        {/* Notes Section */}
+        {client.notes && (
+          <div className="border dark:border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Notes</h3>
+            <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
+              {client.notes}
+            </div>
           </div>
-        </div>
-
-        {/* Upcoming Services */}
-        <div className="border dark:border-border rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">
-            Upcoming Services
-          </h3>
-          
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => {
-              const futureDate = new Date();
-              futureDate.setDate(futureDate.getDate() + (i+1) * 5);
-              
-              return (
-                <div key={i} className="flex items-start border-b dark:border-border pb-4 last:border-0 last:pb-0">
-                  <div className="w-12 h-12 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-4">
-                    <CalendarIcon className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-foreground">
-                      {i === 0 && "Quarterly System Review"}
-                      {i === 1 && "Software Upgrade"}
-                      {i === 2 && "Annual Strategy Meeting"}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
-                      {futureDate.toLocaleDateString()} at {
-                        i === 0 ? "10:00 AM" : i === 1 ? "2:30 PM" : "9:00 AM"
-                      }
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
-                      {i === 0 && "Review existing systems and discuss potential improvements"}
-                      {i === 1 && "Deploy latest software version across all locations"}
-                      {i === 2 && "Annual planning session with executive team"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -467,38 +340,90 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const fetchClients = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getClientsForTeam(new FormData());
+      if (result.error) {
+        toast.error(result.error);
+        setClients([]);
+      } else if (result.clients) {
+        setClients(result.clients);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      toast.error('Failed to load clients');
+      setClients([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // In a real app, you'd fetch data from an API
-    // For this demo, we'll use the demo data
-    setClients(demoClients);
+    fetchClients();
   }, []);
   
   // Handler for adding a new client
-  const handleCreateClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
-    // In a real app, you'd call an API to create the client
-    // For this demo, we'll just add it to the state
-    const newClient: Client = {
-      id: clients.length + 1,
-      ...clientData,
-      createdAt: new Date(),
-    };
-
-    setClients([newClient, ...clients]);
-    setShowCreateForm(false);
+  const handleCreateClient = async (clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'teamId'>) => {
+    try {
+      console.log('Creating client with data:', clientData);
+      
+      const formData = new FormData();
+      Object.entries(clientData).forEach(([key, value]) => {
+        formData.append(key, value?.toString() || '');
+      });
+      
+      // Close the dialog immediately to improve UX
+      setIsDialogOpen(false);
+      
+      const result = await createClient(clientData, formData);
+      console.log('Server response:', result);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      if (result.success) {
+        toast.success(result.success);
+        // Always fetch clients again after a create attempt, even if there was an error
+        // This ensures we display current data from the database
+        fetchClients();
+      }
+    } catch (error) {
+      console.error('Error creating client:', error);
+      toast.error('Failed to create client');
+    }
   };
   
   // Handler for deleting a client
   const handleDeleteClient = async (id: number) => {
-    // In a real app, you'd call an API to delete the client
-    // For this demo, we'll just remove it from the state
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setClients(clients.filter(client => client.id !== id));
-      return Promise.resolve();
+      const result = await deleteClient({ id }, new FormData());
+      
+      if (result.error) {
+        toast.error(result.error);
+        return Promise.reject(result.error);
+      }
+      
+      if (result.success) {
+        toast.success(result.success);
+        // If the deleted client was selected, clear the selection
+        if (selectedClientId === id) {
+          setSelectedClientId(null);
+        }
+        // Refetch clients to get the updated list
+        await fetchClients();
+        return Promise.resolve();
+      }
+      
+      return Promise.reject("Unknown error");
     } catch (error) {
       console.error('Error deleting client:', error);
+      toast.error('Failed to delete client');
       return Promise.reject(error);
     }
   };
@@ -546,7 +471,7 @@ export default function ClientsPage() {
       cell: ({ row }: any) => (
         <div className="flex items-center">
           <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
-          <span className="dark:text-foreground">{row.original.phone}</span>
+          <span className="dark:text-foreground">{row.original.phone || 'Not provided'}</span>
         </div>
       ),
     },
@@ -574,7 +499,7 @@ export default function ClientsPage() {
       header: 'Created',
       cell: ({ row }: any) => (
         <div className="text-gray-500 dark:text-muted-foreground">
-          {formatDistanceToNow(row.original.createdAt, { addSuffix: true })}
+          {formatDistanceToNow(new Date(row.original.createdAt), { addSuffix: true })}
         </div>
       ),
     },
@@ -694,6 +619,7 @@ export default function ClientsPage() {
       onDelete={handleDeleteClient}
       contextMenuItems={contextMenuItems}
       onRowClick={handleRowClick}
+      isLoading={isLoading}
     />
   );
 
@@ -702,7 +628,7 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Clients</h1>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -723,13 +649,7 @@ export default function ClientsPage() {
               </DialogDescription>
             </DialogHeader>
             <CreateClientForm 
-              onCreateClient={(data) => {
-                handleCreateClient(data);
-                // Close dialog after submit
-                document.querySelector('[aria-label="Close"]')?.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true })
-                );
-              }}
+              onCreateClient={handleCreateClient}
             />
           </DialogContent>
         </Dialog>

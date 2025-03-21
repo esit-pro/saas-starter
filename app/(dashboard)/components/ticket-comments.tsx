@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useOptimistic } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardAction } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import { addTicketComment } from '../dashboard/tickets/actions';
 
 type Comment = {
   id: number;
@@ -21,31 +22,84 @@ type Comment = {
 type TicketCommentsProps = {
   ticketId: number;
   comments: Comment[];
-  onAddComment: (comment: { content: string; isInternal: boolean }) => void;
 };
 
-export function TicketComments({ ticketId, comments, onAddComment }: TicketCommentsProps) {
+export function TicketComments({ ticketId, comments: initialComments }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Optimistic updates
+  const [optimisticComments, addOptimisticComment] = useOptimistic(
+    initialComments,
+    (state, newComment: Comment) => [newComment, ...state]
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newComment.trim()) {
-      onAddComment({
+    
+    if (!newComment.trim()) return;
+    
+    setIsSubmitting(true);
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('ticketId', ticketId.toString());
+    formData.append('content', newComment);
+    formData.append('isInternal', isInternal.toString());
+    
+    try {
+      // Create optimistic comment for immediate UI update
+      const optimisticComment = {
+        id: Date.now(), // temporary ID
         content: newComment,
+        createdAt: new Date(),
         isInternal,
-      });
+        user: {
+          id: 0, // Will be replaced with actual user
+          name: 'You', // Placeholder
+          email: '',
+        },
+      };
+      
+      // Add to optimistic state
+      addOptimisticComment(optimisticComment);
+      
+      // Clear form
       setNewComment('');
+      
+      // Submit to server
+      const result = await addTicketComment(
+        {
+          ticketId,
+          content: newComment,
+          isInternal
+        },
+        formData
+      );
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      toast.success("Comment added successfully");
+      
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      toast.error("Failed to add comment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto space-y-4">
-        {comments.length === 0 ? (
+        {optimisticComments.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-center py-8">No comments yet</p>
         ) : (
-          comments.map((comment) => (
+          optimisticComments.map((comment) => (
             <div key={comment.id} className={`p-3 rounded-md ${comment.isInternal ? 'bg-amber-50/50 dark:bg-amber-950/20' : 'bg-gray-50/50 dark:bg-gray-800/20'}`}>
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center">
@@ -57,7 +111,7 @@ export function TicketComments({ ticketId, comments, onAddComment }: TicketComme
                   )}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
+                  {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                 </div>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.content}</p>
@@ -74,6 +128,7 @@ export function TicketComments({ ticketId, comments, onAddComment }: TicketComme
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
+                disabled={isSubmitting}
               />
             </div>
             <div className="flex items-center justify-between">
@@ -83,11 +138,12 @@ export function TicketComments({ ticketId, comments, onAddComment }: TicketComme
                   checked={isInternal}
                   onChange={(e) => setIsInternal(e.target.checked)}
                   className="border-input focus:ring-ring"
+                  disabled={isSubmitting}
                 />
                 Internal note (only visible to team)
               </label>
-              <Button type="submit" size="sm">
-                Add Comment
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Adding...' : 'Add Comment'}
               </Button>
             </div>
           </div>

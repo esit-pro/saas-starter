@@ -3,11 +3,20 @@ import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
 // Public routes that should not be redirected to sign-in
-const publicRoutes = ['/sign-in', '/sign-up', '/api'];
+const publicRoutes = ['/sign-in', '/api'];
+// Registration is temporarily disabled for private testing
+// const publicRoutes = ['/sign-in', '/sign-up', '/api'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
+  
+  // Temporarily redirect sign-up requests to sign-in with a message
+  if (pathname.startsWith('/sign-up')) {
+    const signInUrl = new URL('/sign-in', request.url);
+    signInUrl.searchParams.set('message', 'Registration is temporarily disabled for private testing');
+    return NextResponse.redirect(signInUrl);
+  }
   
   // Check if this is a public route that doesn't need authentication
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));

@@ -1,0 +1,759 @@
+'use server';
+
+import { z } from 'zod';
+import { db } from '@/lib/db/drizzle';
+import { serviceTickets, ActivityType, activityLogs, teams, teamMembers, users, clients, ticketComments, timeEntries, expenses } from '@/lib/db/schema';
+import { validatedActionWithUser } from '@/lib/auth/middleware';
+import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { eq, and, desc } from 'drizzle-orm';
+
+// Log ticket-related activities
+async function logTicketActivity(
+  teamId: number,
+  userId: number,
+  type: ActivityType,
+  ticketId?: number
+) {
+  const action = `${type}${ticketId ? ` (Ticket ID: ${ticketId})` : ''}`;
+  await db.insert(activityLogs).values({
+    teamId,
+    userId,
+    action,
+    timestamp: new Date(),
+  });
+}
+
+// Create a ticket
+const createTicketSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  clientId: z.preprocess(
+    (val) => Number(val),
+    z.number().positive('Client is required')
+  ),
+  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  category: z.string().optional(),
+  assignedTo: z.preprocess(
+    (val) => val ? Number(val) : undefined,
+    z.number().optional()
+  ),
+  dueDate: z.string().optional().nullable(),
+});
+
+export const createTicket = validatedActionWithUser(
+  createTicketSchema,
+  async (data, _, user) => {
+    console.log('Creating ticket - authenticated user:', { 
+      id: user.id,
+      email: user.email,
+      role: user.role 
+    });
+    
+    let userTeamInfo = await getUserWithTeam(user.id);
+    console.log('User with team:', userTeamInfo);
+    
+    // If user doesn't have a team, create one
+    if (!userTeamInfo?.teamId) {
+      console.warn('User has no team association!');
+      
+      // Let's automatically create a team for this user if they don't have one
+      try {
+        console.log('Creating a default team for user...');
+        const [newTeam] = await db
+          .insert(teams)
+          .values({
+            name: `${user.email}'s Team`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+          
+        console.log('Created team:', newTeam);
+        
+        // Add user to the team
+        await db
+          .insert(teamMembers)
+          .values({
+            userId: user.id,
+            teamId: newTeam.id,
+            role: 'owner',
+            joinedAt: new Date(),
+          });
+          
+        // Use the new team ID
+        userTeamInfo = { user, teamId: newTeam.id };
+      } catch (err) {
+        console.error('Failed to create default team:', err);
+        return { error: 'User is not part of a team and failed to create a default team' };
+      }
+    }
+    
+    // Make sure we have a team ID by this point
+    if (!userTeamInfo?.teamId) {
+      return { error: 'Could not determine team ID for user' };
+    }
+
+    try {
+      const teamId = userTeamInfo.teamId;
+      
+      // Convert string date to Date object if present
+      const dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      
+      console.log('Creating ticket with data:', {
+        ...data,
+        teamId,
+        createdBy: user.id,
+        dueDate
+      });
+      
+      const [newTicket] = await db
+        .insert(serviceTickets)
+        .values({
+          title: data.title,
+          description: data.description || null,
+          clientId: data.clientId,
+          assignedTo: data.assignedTo || null,
+          priority: data.priority,
+          category: data.category || null,
+          dueDate,
+          teamId,
+          createdBy: user.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+        
+      console.log('Ticket created successfully:', newTicket);
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.TICKET_CREATED,
+        newTicket.id
+      );
+
+      return { 
+        success: 'Ticket created successfully',
+        ticket: newTicket
+      };
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      return { error: 'Failed to create ticket. Please try again.' };
+    }
+  }
+);
+
+// Update a ticket
+const updateTicketSchema = z.object({
+  id: z.preprocess((val) => Number(val), z.number()),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  clientId: z.preprocess(
+    (val) => Number(val),
+    z.number().positive('Client is required')
+  ),
+  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  category: z.string().optional(),
+  assignedTo: z.preprocess(
+    (val) => val ? Number(val) : undefined,
+    z.number().optional()
+  ),
+  status: z.enum(['open', 'in-progress', 'on-hold', 'completed', 'closed']),
+  dueDate: z.string().optional().nullable(),
+});
+
+export const updateTicket = validatedActionWithUser(
+  updateTicketSchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify ticket belongs to this team
+      const teamId = userTeamInfo.teamId;
+      const existingTicket = await db.query.serviceTickets.findFirst({
+        where: (ticket, { and, eq: whereEq }) => 
+          and(whereEq(ticket.id, data.id), whereEq(ticket.teamId, teamId))
+      });
+
+      if (!existingTicket) {
+        return { error: 'Ticket not found or not authorized to modify' };
+      }
+
+      // Convert string date to Date object if present
+      const dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      
+      // If status is changing to closed, set closedAt
+      const closedAt = data.status === 'closed' ? new Date() : existingTicket.closedAt;
+
+      const [updatedTicket] = await db
+        .update(serviceTickets)
+        .set({
+          title: data.title,
+          description: data.description || null,
+          clientId: data.clientId,
+          assignedTo: data.assignedTo || null,
+          priority: data.priority,
+          category: data.category || null,
+          status: data.status,
+          dueDate,
+          closedAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(serviceTickets.id, data.id))
+        .returning();
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        data.status === 'closed' ? ActivityType.TICKET_CLOSED : ActivityType.TICKET_UPDATED,
+        updatedTicket.id
+      );
+
+      return { 
+        success: 'Ticket updated successfully',
+        ticket: updatedTicket
+      };
+    } catch (error) {
+      console.error('Failed to update ticket:', error);
+      return { error: 'Failed to update ticket. Please try again.' };
+    }
+  }
+);
+
+// Delete a ticket
+const deleteTicketSchema = z.object({
+  id: z.preprocess((val) => Number(val), z.number()),
+});
+
+export const deleteTicket = validatedActionWithUser(
+  deleteTicketSchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify ticket belongs to this team
+      const teamId = userTeamInfo.teamId;
+      const existingTicket = await db.query.serviceTickets.findFirst({
+        where: (ticket, { and, eq: whereEq }) => 
+          and(whereEq(ticket.id, data.id), whereEq(ticket.teamId, teamId))
+      });
+
+      if (!existingTicket) {
+        return { error: 'Ticket not found or not authorized to delete' };
+      }
+
+      // In a real application, you might want to check for dependencies
+      // before deleting (comments, time entries, expenses)
+      
+      const [deletedTicket] = await db
+        .delete(serviceTickets)
+        .where(eq(serviceTickets.id, data.id))
+        .returning();
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.TICKET_UPDATED,  // Using updated as there's no specific delete activity type
+        deletedTicket.id
+      );
+
+      return { success: 'Ticket deleted successfully' };
+    } catch (error) {
+      console.error('Failed to delete ticket:', error);
+      return { error: 'Failed to delete ticket. Please try again.' };
+    }
+  }
+);
+
+// Get all tickets for the team
+export async function getTicketsForTeam(_formData?: FormData) {
+  const user = await getUser();
+  if (!user) return { error: 'User not authenticated' };
+
+  let userTeamInfo = await getUserWithTeam(user.id);
+  console.log('Get tickets - user team info:', userTeamInfo);
+  
+  // If user doesn't have a team, create one
+  if (!userTeamInfo?.teamId) {
+    console.log('User has no team - creating one for tickets listing');
+    
+    try {
+      // Create a default team
+      const [newTeam] = await db
+        .insert(teams)
+        .values({
+          name: `${user.email}'s Team`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+        
+      console.log('Created team for ticket list:', newTeam);
+      
+      // Add user to the team
+      await db
+        .insert(teamMembers)
+        .values({
+          userId: user.id,
+          teamId: newTeam.id,
+          role: 'owner',
+          joinedAt: new Date(),
+        });
+        
+      // Use the new team ID
+      userTeamInfo = { user, teamId: newTeam.id };
+    } catch (err) {
+      console.error('Failed to create default team for ticket list:', err);
+      return { error: 'Failed to create a team for your account', tickets: [] };
+    }
+  }
+
+  try {
+    const teamId = userTeamInfo.teamId;
+    console.log('Fetching tickets for teamId:', teamId);
+    
+    // Get ticket list with client and assignee info
+    const ticketList = await db
+      .select({
+        ticket: serviceTickets,
+        client: {
+          id: clients.id,
+          name: clients.name
+        },
+        assignedUser: {
+          id: users.id,
+          name: users.name,
+          email: users.email
+        }
+      })
+      .from(serviceTickets)
+      .leftJoin(clients, eq(serviceTickets.clientId, clients.id))
+      .leftJoin(users, eq(serviceTickets.assignedTo, users.id))
+      .where(eq(serviceTickets.teamId, teamId as number))
+      .orderBy(desc(serviceTickets.createdAt));
+    
+    console.log('Fetched tickets:', ticketList);
+
+    // Transform the data for the frontend
+    const formattedTickets = ticketList.map(item => ({
+      id: item.ticket.id,
+      title: item.ticket.title,
+      client: item.client?.name || 'Unknown Client',
+      clientId: item.client?.id || 0,
+      assignedTo: item.assignedUser?.name || 'Unassigned',
+      status: item.ticket.status,
+      priority: item.ticket.priority,
+      category: item.ticket.category || 'Uncategorized',
+      createdAt: item.ticket.createdAt,
+      dueDate: item.ticket.dueDate
+    }));
+
+    return { tickets: formattedTickets };
+  } catch (error) {
+    console.error('Failed to fetch tickets:', error);
+    return { error: 'Failed to fetch tickets. Please try again.' };
+  }
+}
+
+// Get a specific ticket by ID with full details
+export async function getTicketById(id: number, _formData?: FormData) {
+  const user = await getUser();
+  if (!user) return { error: 'User not authenticated' };
+
+  let userTeamInfo = await getUserWithTeam(user.id);
+  console.log('Get ticket by ID - user team info:', userTeamInfo);
+  
+  // Skip team creation for read operations - this should already be created from other operations
+  if (!userTeamInfo?.teamId) {
+    return { error: 'User is not part of a team' };
+  }
+
+  try {
+    const teamId = userTeamInfo.teamId;
+    console.log(`Fetching ticket with ID: ${id} for team: ${teamId}`);
+    
+    const ticket = await db.query.serviceTickets.findFirst({
+      where: (ticket, { and, eq: whereEq }) => 
+        and(whereEq(ticket.id, id), whereEq(ticket.teamId, teamId)),
+      with: {
+        client: true,
+        assignedUser: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        createdByUser: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        comments: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: (comment, { desc }) => [desc(comment.createdAt)],
+        },
+      },
+    });
+
+    if (!ticket) {
+      return { error: 'Ticket not found' };
+    }
+
+    // Get time entries for this ticket
+    const timeEntriesData = await db
+      .select({
+        timeEntry: timeEntries,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email
+        }
+      })
+      .from(timeEntries)
+      .leftJoin(users, eq(timeEntries.userId, users.id))
+      .where(eq(timeEntries.ticketId, id))
+      .orderBy(desc(timeEntries.createdAt));
+
+    // Get expenses for this ticket
+    const expensesData = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.ticketId, id))
+      .orderBy(desc(expenses.createdAt));
+
+    return { 
+      ticket,
+      timeEntries: timeEntriesData.map(item => ({
+        ...item.timeEntry,
+        user: item.user
+      })),
+      expenses: expensesData
+    };
+  } catch (error) {
+    console.error('Failed to fetch ticket:', error);
+    return { error: 'Failed to fetch ticket. Please try again.' };
+  }
+}
+
+// Add comment to ticket
+const addCommentSchema = z.object({
+  ticketId: z.preprocess((val) => Number(val), z.number()),
+  content: z.string().min(1, 'Comment text is required'),
+  isInternal: z.preprocess(
+    (val) => val === 'true' || val === true,
+    z.boolean().default(false)
+  ),
+});
+
+export const addTicketComment = validatedActionWithUser(
+  addCommentSchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify ticket belongs to this team
+      const teamId = userTeamInfo.teamId;
+      const existingTicket = await db.query.serviceTickets.findFirst({
+        where: (ticket, { and, eq: whereEq }) => 
+          and(whereEq(ticket.id, data.ticketId), whereEq(ticket.teamId, teamId))
+      });
+
+      if (!existingTicket) {
+        return { error: 'Ticket not found or not authorized to comment' };
+      }
+
+      const [newComment] = await db
+        .insert(ticketComments)
+        .values({
+          ticketId: data.ticketId,
+          userId: user.id,
+          content: data.content,
+          isInternal: data.isInternal,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      // Get the user info for the response
+      const commentWithUser = {
+        ...newComment,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email
+        }
+      };
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.TICKET_UPDATED,
+        data.ticketId
+      );
+
+      return { 
+        success: 'Comment added successfully',
+        comment: commentWithUser
+      };
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      return { error: 'Failed to add comment. Please try again.' };
+    }
+  }
+);
+
+// Log time on a ticket
+const logTimeSchema = z.object({
+  ticketId: z.preprocess((val) => Number(val), z.number()),
+  clientId: z.preprocess((val) => Number(val), z.number()),
+  description: z.string().min(1, 'Description is required'),
+  duration: z.preprocess((val) => Number(val), z.number().min(1, 'Duration must be at least 1 minute')),
+  startTime: z.string().min(1, 'Start time is required'),
+  billable: z.preprocess(
+    (val) => val === 'true' || val === true,
+    z.boolean().default(true)
+  ),
+  billableRate: z.preprocess(
+    (val) => val ? Number(val) : undefined,
+    z.number().optional()
+  ),
+});
+
+export const logTimeEntry = validatedActionWithUser(
+  logTimeSchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify ticket belongs to this team
+      const teamId = userTeamInfo.teamId;
+      if (data.ticketId) {
+        const existingTicket = await db.query.serviceTickets.findFirst({
+          where: (ticket, { and, eq: whereEq }) => 
+            and(whereEq(ticket.id, data.ticketId), whereEq(ticket.teamId, teamId))
+        });
+
+        if (!existingTicket) {
+          return { error: 'Ticket not found or not authorized to log time' };
+        }
+      }
+
+      // Verify client belongs to this team
+      const existingClient = await db.query.clients.findFirst({
+        where: (client, { and, eq: whereEq }) => 
+          and(whereEq(client.id, data.clientId), whereEq(client.teamId, teamId))
+      });
+
+      if (!existingClient) {
+        return { error: 'Client not found or not authorized to log time' };
+      }
+
+      const [newTimeEntry] = await db
+        .insert(timeEntries)
+        .values({
+          ticketId: data.ticketId || null,
+          clientId: data.clientId,
+          userId: user.id,
+          description: data.description,
+          startTime: new Date(data.startTime),
+          duration: data.duration,
+          billable: data.billable,
+          billableRate: data.billableRate ? data.billableRate.toString() : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      // Get the user info for the response
+      const timeEntryWithUser = {
+        ...newTimeEntry,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email
+        }
+      };
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.TIME_ENTRY_CREATED,
+        data.ticketId
+      );
+
+      return { 
+        success: 'Time logged successfully',
+        timeEntry: timeEntryWithUser
+      };
+    } catch (error) {
+      console.error('Failed to log time:', error);
+      return { error: 'Failed to log time. Please try again.' };
+    }
+  }
+);
+
+// Add expense to a ticket
+const addExpenseSchema = z.object({
+  ticketId: z.preprocess((val) => Number(val), z.number()),
+  clientId: z.preprocess((val) => Number(val), z.number()),
+  description: z.string().min(1, 'Description is required'),
+  amount: z.preprocess((val) => Number(val), z.number().positive('Amount must be positive')),
+  date: z.string().min(1, 'Date is required'),
+  category: z.string().optional(),
+  billable: z.preprocess(
+    (val) => val === 'true' || val === true,
+    z.boolean().default(true)
+  ),
+  notes: z.string().optional(),
+  receiptUrl: z.string().optional(),
+});
+
+export const addExpense = validatedActionWithUser(
+  addExpenseSchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify ticket belongs to this team
+      const teamId = userTeamInfo.teamId;
+      if (data.ticketId) {
+        const existingTicket = await db.query.serviceTickets.findFirst({
+          where: (ticket, { and, eq: whereEq }) => 
+            and(whereEq(ticket.id, data.ticketId), whereEq(ticket.teamId, teamId))
+        });
+
+        if (!existingTicket) {
+          return { error: 'Ticket not found or not authorized to add expense' };
+        }
+      }
+
+      // Verify client belongs to this team
+      const existingClient = await db.query.clients.findFirst({
+        where: (client, { and, eq: whereEq }) => 
+          and(whereEq(client.id, data.clientId), whereEq(client.teamId, teamId))
+      });
+
+      if (!existingClient) {
+        return { error: 'Client not found or not authorized to add expense' };
+      }
+
+      const [newExpense] = await db
+        .insert(expenses)
+        .values({
+          ticketId: data.ticketId || null,
+          clientId: data.clientId,
+          userId: user.id,
+          description: data.description,
+          amount: data.amount.toString(),
+          date: new Date(data.date),
+          category: data.category || null,
+          billable: data.billable,
+          notes: data.notes || null,
+          receiptUrl: data.receiptUrl || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.EXPENSE_CREATED,
+        data.ticketId
+      );
+
+      return { 
+        success: 'Expense added successfully',
+        expense: newExpense
+      };
+    } catch (error) {
+      console.error('Failed to add expense:', error);
+      return { error: 'Failed to add expense. Please try again.' };
+    }
+  }
+);
+
+// Get clients for selection in forms
+export async function getClientsForSelection(_formData?: FormData) {
+  const user = await getUser();
+  if (!user) return { error: 'User not authenticated' };
+
+  let userTeamInfo = await getUserWithTeam(user.id);
+  if (!userTeamInfo?.teamId) {
+    return { error: 'User is not part of a team', clients: [] };
+  }
+
+  try {
+    const teamId = userTeamInfo.teamId;
+    
+    const clientList = await db
+      .select({
+        id: clients.id,
+        name: clients.name,
+      })
+      .from(clients)
+      .where(eq(clients.teamId, teamId))
+      .orderBy(clients.name);
+
+    return { clients: clientList };
+  } catch (error) {
+    console.error('Failed to fetch clients:', error);
+    return { error: 'Failed to fetch clients. Please try again.', clients: [] };
+  }
+}
+
+// Get team members for assignment
+export async function getTeamMembersForAssignment(_formData?: FormData) {
+  const user = await getUser();
+  if (!user) return { error: 'User not authenticated' };
+
+  let userTeamInfo = await getUserWithTeam(user.id);
+  if (!userTeamInfo?.teamId) {
+    return { error: 'User is not part of a team', members: [] };
+  }
+
+  try {
+    const teamId = userTeamInfo.teamId;
+    
+    const memberList = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      })
+      .from(teamMembers)
+      .innerJoin(users, eq(teamMembers.userId, users.id))
+      .where(eq(teamMembers.teamId, teamId));
+
+    return { members: memberList };
+  } catch (error) {
+    console.error('Failed to fetch team members:', error);
+    return { error: 'Failed to fetch team members. Please try again.', members: [] };
+  }
+}

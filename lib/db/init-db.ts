@@ -1,10 +1,15 @@
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import 'dotenv/config';
+
 
 async function main() {
   // First connect as postgres user to create the database and user
-  const adminUrl = 'postgres://postgres:postgres@localhost:54322/postgres';
+  // Load environment variables
+  
+  // Use default admin connection if POSTGRES_ADMIN_URL is not defined
+  const adminUrl = process.env.POSTGRES_URL || 'postgres://postgres:postgres@localhost:54322/postgres';
   const adminClient = postgres(adminUrl);
 
   try {
@@ -219,6 +224,53 @@ async function main() {
       );
     `);
     console.log('Created expenses table');
+
+    // Insert a test team and client for development
+    try {
+      console.log('Creating test data...');
+      
+      // Check if test team exists
+      const testTeam = await db.execute(sql`SELECT id FROM teams WHERE name = 'Test Team' LIMIT 1`);
+      
+      let teamId;
+      
+      // Type assertion for rows property
+      const testTeamRows = (testTeam as unknown as { rows: Array<{ id: number }> }).rows;
+      
+      if (testTeamRows.length === 0) {
+        // Create test team
+        const newTeam = await db.execute(sql`
+          INSERT INTO teams (name, created_at, updated_at)
+          VALUES ('Test Team', now(), now())
+          RETURNING id
+        `);
+        
+        // Type assertion for newTeam rows
+        const newTeamRows = (newTeam as unknown as { rows: Array<{ id: number }> }).rows;
+        teamId = newTeamRows[0].id;
+        console.log('Created test team with ID:', teamId);
+      } else {
+        teamId = testTeamRows[0].id;
+        console.log('Using existing test team with ID:', teamId);
+      }
+      
+      // Create test client
+      await db.execute(sql`
+        INSERT INTO clients (
+          team_id, name, contact_name, email, phone, 
+          address, notes, is_active, created_at, updated_at
+        )
+        VALUES (
+          ${teamId}, 'Acme Corporation', 'John Doe', 'contact@acme.com', 
+          '555-123-4567', '123 Main St', 'Test client', true, now(), now()
+        )
+        ON CONFLICT DO NOTHING
+      `);
+      
+      console.log('Test data created or already exists');
+    } catch (error) {
+      console.error('Error creating test data:', error);
+    }
 
     console.log('All tables created successfully!');
   } catch (error) {
