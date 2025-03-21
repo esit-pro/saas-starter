@@ -35,7 +35,7 @@ export default function RootLayout({
         <ThemeEffect />
       </head>
       <body className="min-h-[100dvh] bg-background text-foreground">
-        <ThemeProvider defaultTheme="dark">
+        <ThemeProvider defaultTheme="system">
           <ThemeScript />
           <UserProvider userPromise={userPromise}>{children}</UserProvider>
         </ThemeProvider>
