@@ -24,9 +24,6 @@ import {
   DollarSign,
   Paperclip
 } from 'lucide-react';
-import { SplitView } from '../../components/split-view';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
 import { TicketWidgetsCard } from '../../components/ticket-widgets-card';
@@ -45,11 +42,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { CreateTicketForm } from '../../components/create-ticket-form';
 import { TicketComments } from '../../components/ticket-comments';
