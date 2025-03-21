@@ -52,8 +52,6 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
 import { z } from "zod"
-import { AnimatePresence } from "framer-motion"
-import { motion } from "framer-motion"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
@@ -149,8 +147,6 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     id: "drag",
     header: () => null,
     cell: ({ row }) => <DragHandle id={row.original.id} />,
-    size: 40,
-    enableHiding: false,
   },
   {
     id: "select",
@@ -177,7 +173,6 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
-    size: 40,
   },
   {
     accessorKey: "header",
@@ -322,129 +317,66 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
 ]
 
-function DraggableRow({ 
-  row, 
-  isBeingDeleted, 
-  onDelete 
-}: { 
-  row: Row<z.infer<typeof schema>>;
-  isBeingDeleted?: boolean;
-  onDelete: () => void;
-}) {
+function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
-    disabled: isBeingDeleted, // Disable dragging during deletion
   });
 
-  // Add a reference to track swipe gesture
-  const rowRef = React.useRef<HTMLDivElement>(null);
+  // Get the actions column to use for the context menu
+  const actionsColumn = row.getVisibleCells().find(
+    cell => cell.column.id === "actions"
+  );
   
-  // Track swipe position
-  const [swipeOffset, setSwipeOffset] = React.useState(0);
-  
-  // Handle touch/mouse events for swipe 
-  const handleTouchStart = React.useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    // Implementation for touch start
-    // ...
-  }, []);
-
-  // Apply transformation based on deletion state or dragging
-  const rowTransform = React.useMemo(() => {
-    if (isBeingDeleted) {
-      // Only apply horizontal transform for deleted rows
-      return 'translateX(-100%)';
-    }
-    
-    // For other rows, keep the original DnD transform which is vertical only
-    return CSS.Transform.toString(transform);
-  }, [isBeingDeleted, transform]);
-  
-  // Apply transition based on state
-  const rowTransition = React.useMemo(() => {
-    if (isBeingDeleted) {
-      // Use a consistent transition for deletion
-      return 'transform 300ms ease-out';
-    }
-    
-    // Otherwise use the DnD transition
-    return transition;
-  }, [isBeingDeleted, transition]);
-
-  return (
-    <div className="relative w-full" ref={rowRef}>
-      {/* Delete button container - positioned as an overlay */}
-      <div 
-        className="absolute inset-0 flex items-center justify-end bg-red-500 text-white"
-        style={{ 
-          opacity: isDragging ? 0 : undefined,
-          zIndex: -1
-        }}
-      >
-        <div className="px-4">Delete</div>
-      </div>
-
-      <TableRow
-        ref={setNodeRef}
-        style={{
-          transform: rowTransform,
-          transition: rowTransition,
-          position: 'relative',
-          zIndex: 1,
-          backgroundColor: 'var(--background)',
-          width: '100%'
-        }}
-        data-state={row.getIsSelected() && "selected"}
-        data-dragging={isDragging}
-        data-deleting={isBeingDeleted}
-      >
-        {row.getVisibleCells().map((cell) => {
-          // For the actions cell, add delete trigger
-          if (cell.column.id === 'actions') {
-            return (
-              <TableCell key={cell.id}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-                      size="icon"
-                    >
-                      <IconDotsVertical />
-                      <span className="sr-only">Open menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-32">
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                    <DropdownMenuItem>Make a copy</DropdownMenuItem>
-                    <DropdownMenuItem>Favorite</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      variant="destructive"
-                      onClick={onDelete} // Connect to delete handler
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            );
+  // Function to render the context menu content
+  const renderContextMenu = (row: Row<z.infer<typeof schema>>) => {
+    if (actionsColumn) {
+      // Extract the dropdown menu items
+      const actionCell = actionsColumn.column.columnDef.cell;
+      
+      if (typeof actionCell === 'function') {
+        const ctx = actionsColumn.getContext();
+        
+        try {
+          // Get meta content if available
+          const meta = ctx.table.options.meta as CustomTableMeta | undefined;
+          
+          // If we have custom items in meta, use those
+          if (meta?.contextMenuItems) {
+            return meta.contextMenuItems;
           }
           
-          // For all other cells, render normally
-          return (
-            <TableCell 
-              key={cell.id}
-              style={{
-                width: cell.column.getSize(),
-                minWidth: cell.column.getSize(),
-              }}
-            >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </TableCell>
-          );
-        })}
-      </TableRow>
-    </div>
+          // Otherwise return our standard items directly
+          return [
+            <DropdownMenuItem key="edit">Edit</DropdownMenuItem>,
+            <DropdownMenuItem key="copy">Make a copy</DropdownMenuItem>,
+            <DropdownMenuItem key="favorite">Favorite</DropdownMenuItem>,
+            <DropdownMenuSeparator key="sep" />,
+            <DropdownMenuItem key="delete" variant="destructive">Delete</DropdownMenuItem>
+          ];
+        } catch (e) {
+          console.error('Error rendering context menu:', e);
+        }
+      }
+    }
+    return null;
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
   );
 }
 
@@ -476,17 +408,6 @@ export function DataTable({
     () => data?.map(({ id }) => id) || [],
     [data]
   )
-
-  const [rowsBeingDeleted, setRowsBeingDeleted] = React.useState<number[]>([])
-  
-  const handleDeleteRow = React.useCallback((id: number) => {
-    setRowsBeingDeleted(prev => [...prev, id])
-    
-    setTimeout(() => {
-      setData(current => current.filter(row => row.id !== id))
-      setRowsBeingDeleted(prev => prev.filter(rowId => rowId !== id))
-    }, 300)
-  }, [])
 
   const table = useReactTable({
     data,
@@ -614,11 +535,7 @@ export function DataTable({
               <TableHeader className="bg-muted sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    <TableHead className="w-8">
-                      {/* Intentionally empty for drag handle column */}
-                    </TableHead>
                     {headerGroup.headers.map((header) => {
-                      if (header.id === 'drag') return null;
                       return (
                         <TableHead key={header.id} colSpan={header.colSpan}>
                           {header.isPlaceholder
@@ -640,28 +557,7 @@ export function DataTable({
                     strategy={verticalListSortingStrategy}
                   >
                     {table.getRowModel().rows.map((row) => (
-                      <motion.div
-                        key={row.id}
-                        layout="position"
-                        layoutId={`row-${row.id}`}
-                        transition={{
-                          type: "spring",
-                          bounce: 0.1,
-                          duration: 0.3,
-                          mass: 0.8,
-                          stiffness: 100
-                        }}
-                        style={{
-                          // Force only vertical animations for position changes
-                          x: 0
-                        }}
-                      >
-                        <DraggableRow 
-                          row={row} 
-                          isBeingDeleted={rowsBeingDeleted.includes(row.original.id)} 
-                          onDelete={() => handleDeleteRow(row.original.id)}
-                        />
-                      </motion.div>
+                      <DraggableRow key={row.id} row={row} />
                     ))}
                   </SortableContext>
                 ) : (

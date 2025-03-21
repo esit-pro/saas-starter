@@ -21,7 +21,7 @@ export async function createCheckoutSession({
   const user = await getUser();
 
   if (!team || !user) {
-    redirect(`/sign-in?redirect=checkout&priceId=${priceId}`);
+    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
 
   const session = await stripe.checkout.sessions.create({

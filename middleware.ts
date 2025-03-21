@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
 // Public routes that should not be redirected to sign-in
-const publicRoutes = ['/sign-in', '/api'];
+const publicRoutes = ['/sign-in', '/sign-up', '/api'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

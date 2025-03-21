@@ -15,20 +15,6 @@
       "when": 1742334667609,
       "tag": "0001_steep_mojo",
       "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1742562099531,
-      "tag": "0002_flippant_cannonball",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1742562147951,
-      "tag": "0003_spicy_jigsaw",
-      "breakpoints": true
     }
   ]
 }

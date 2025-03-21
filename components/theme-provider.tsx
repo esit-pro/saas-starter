@@ -27,7 +27,7 @@ export const ThemeProviderContext = React.createContext<ThemeProviderState>(init
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "dark",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme)

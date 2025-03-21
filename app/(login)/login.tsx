@@ -9,6 +9,10 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
 
-  // Always return signin form regardless of mode
-  return <UserAuthForm mode="signin" />;
+  // Redirect user to appropriate page with query params
+  if (mode === 'signin') {
+    return <UserAuthForm mode="signin" />;
+  } else {
+    return <UserAuthForm mode="signup" />;
+  }
 }

@@ -33,12 +33,26 @@ export default function SignInPage() {
             Forgot your password?
           </Link>
         </div>
+        <div className="px-8 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/sign-up" className="hover:text-brand underline underline-offset-4">
+            Sign up
+          </Link>
+        </div>
       </div>
 
       {/* Desktop view */}
       <div className="container relative hidden h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
         <div className="absolute right-8 top-8 z-50 flex items-center gap-4">
           <ThemeToggle />
+          <Link
+            href="/sign-up"
+            className={cn(
+              buttonVariants({ variant: 'ghost' })
+            )}
+          >
+            Sign Up
+          </Link>
         </div>
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
           <div className="absolute inset-0 bg-zinc-900" />
@@ -72,6 +86,15 @@ export default function SignInPage() {
                 className="underline underline-offset-4 hover:text-primary"
               >
                 Forgot your password?
+              </Link>
+            </p>
+            <p className="px-8 text-center text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/sign-up"
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Sign up
               </Link>
             </p>
           </div>
