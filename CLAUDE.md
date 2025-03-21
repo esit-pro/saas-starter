@@ -134,39 +134,92 @@
 - Stripe for payment processing
 
 ## TypeScript Type Safety Patterns
-- **Common Type Issues**:
-  - Handle potential null values with optional chaining (`item.client?.name`) and nullish coalescing (`|| 'default'`)
-  - Use type assertions (`as number`) for Drizzle ORM parameters when TypeScript can't infer non-null values
-  - Properly define component props interfaces with optional properties (`disabled?: boolean`)
-  - Convert numeric values to strings for decimal DB fields (`amount.toString()`)
 
-- **Server Actions**:
-  - Server actions use Zod for runtime validation
-  - Prefer strongly-typed parameters in server action functions
-  - Return objects with consistent shape (e.g., `{ success: string }` or `{ error: string }`)
-  - Handle both optimistic client-side updates and server validation
+### Database Type Handling
+- **Drizzle ORM Patterns**:
+  - Define database schema in `schema.ts` with explicit column types
+  - Use the generated types (`$inferSelect`, `$inferInsert`) for strongly-typed entities
+  - Add type assertions (`as number`) when working with potentially null team IDs
+  - Handle ORM constraints with proper type conversions:
+    - Use `.toString()` for numeric values in decimal/numeric columns
+    - Use `|| null` for optional foreign key relations
+    - Use type guards before accessing nullable relations
+
+- **Query Type Safety**:
+  - Use `eq()` with non-null values in Drizzle query filters
+  - Handle potential null references with optional chaining in nested joins
+  - Provide fallback values for nullable fields in mapped results
+  - Example: `client: item.client?.name || 'Unknown Client'`
+
+### Form Data Type Handling
+- **Form Submission**:
+  - Use Zod schemas to validate and parse form data for server actions
+  - Apply type preprocessing in Zod for consistent data types:
+    ```typescript
+    clientId: z.preprocess(
+      (val) => Number(val),
+      z.number().positive('Client is required')
+    )
+    ```
+  - Handle form data type conversions when creating FormData objects
+  - Ensure null/undefined values are properly handled in form submissions
 
 - **Component Props**:
-  - Define clear interfaces for component props
-  - Use generic types for reusable components
-  - Ensure form components properly handle loading and disabled states
+  - Define clear interfaces for component props with proper nullability
+  - Use optional fields with default values in function parameters
+  - Consider using generics for reusable components that handle different entity types
+  - Implement proper disabled state handling and loading indicators
+
+### Type Safety Best Practices
+- **Type Guards**:
+  - Use type narrowing with explicit checks before accessing potentially undefined properties
+  - Apply null coalescing for default values: `item.value ?? defaultValue`
+  - Implement conditional rendering based on data presence
+  - Avoid type assertions except when TypeScript can't infer the correct type
+
+- **Error Handling**:
+  - Use try/catch blocks for async operations with proper error typing
+  - Return typed result objects: `{ success?: string, error?: string, data?: T }`
+  - Apply consistent error handling patterns across similar components
+  - Log errors for debugging but display user-friendly messages
 
 ## Server vs Client Components
-- **Server Components**:
-  - Dynamic route pages should be server components (without 'use client')
-  - Server components receive `params` prop automatically (e.g., `params: { id: string }`)
-  - Use server components to fetch initial data using server actions
-  - Pass data to client components for interactive functionality
 
-- **Client Components**:
-  - Mark with 'use client' directive at the top of the file
-  - Create dedicated client component files for interactive UI elements
-  - Receive data as props from parent server components
-  - Handle form submissions, user input, and client-side interactions
-  
-- **Dynamic Route Patterns**:
-  - There are two approaches for dynamic route pages:
-    1. Server Component Pattern: Create a server component for the page component that receives params automatically
-    2. Client Component Pattern: Create a client component that accesses params via the useParams() hook
-  - For forms and interactive elements, the client component pattern is often simpler
-  - Example: `/clients/[id]/edit/page.tsx` uses client-side rendering with `useParams()`
+### Next.js App Router Architecture
+- **Component Types**:
+  - **Server Components**: Default in App Router; run only on the server with no client JS
+  - **Client Components**: Marked with 'use client'; interactive with client-side JS
+  - **Hybrid Approach**: Server components for data fetching + client components for interactivity
+
+- **Data Flow Patterns**:
+  - **Server-first Pattern**: Server components fetch data, pass to client components as props
+  - **Client-first Pattern**: Client components fetch their own data with useEffect/SWR/React Query
+  - **Hybrid Pattern**: Server components pre-render initial view, client components handle updates
+
+### Dynamic Route Patterns
+- **Server Component Route Pages**:
+  - Receive `params` and `searchParams` props automatically
+  - Can use async/await for data fetching in component body
+  - Avoid using hooks (useEffect, useState, useParams)
+  - Limited by TypeScript constraints with PageProps interface
+
+- **Client Component Route Pages**:
+  - Must use `useParams()` hook to access route parameters
+  - Need to handle data fetching with useEffect/SWR
+  - Include loading states and error boundaries
+  - More flexible for forms and interactive elements
+  - Example: `/dashboard/tickets/[id]/edit/page.tsx`, `/dashboard/clients/[id]/edit/page.tsx`
+
+### Component Structure Best Practices
+- **Page Component Pattern**:
+  - Keep page components thin (< 20 lines) as routers to specialized components
+  - For interactive pages: `'use client'` + `useParams()` + render form component
+  - For read-only pages: Server component + pass data to client components
+
+- **Form Handling Architecture**:
+  - Forms should be client components with their own data loading logic
+  - Use `useState` for form fields + `useEffect` for initial data loading
+  - Submit with server actions, captured in `try/catch` blocks
+  - Show loading states during submission
+  - Display success/error with toast notifications
+  - Navigate with router.push() after successful submission

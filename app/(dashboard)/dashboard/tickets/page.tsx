@@ -744,7 +744,29 @@ export default function TicketsPage() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(demoTimeEntries);
   const [expenses, setExpenses] = useState<Expense[]>(demoExpenses);
   const [statusHistory, setStatusHistory] = useState<StatusChange[]>(demoStatusHistory);
-  const [clients, setClients] = useState<Client[]>(demoClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  
+  // Fetch clients
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const result = await getClientsForSelection();
+        if (result.error) {
+          console.error('Error fetching clients:', result.error);
+          // Keep demo clients as fallback if needed
+          setClients(demoClients);
+        } else if (result.clients) {
+          setClients(result.clients);
+        }
+      } catch (error) {
+        console.error('Failed to fetch clients:', error);
+        // Use demo clients as fallback
+        setClients(demoClients);
+      }
+    };
+    
+    fetchClients();
+  }, []);
 
   // Define a handler for row clicks
   const handleRowClick = (row: any) => {
