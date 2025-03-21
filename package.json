@@ -9,7 +9,9 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:migrate-sample": "npx tsx lib/db/migrate-sample-data.ts",
+    "db:add-team-id": "npx tsx lib/db/migrations/add_team_id_to_time_entries.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -79,6 +81,7 @@
     "tailwindcss": "4.0.12",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss-react-aria-components": "2.0.0",
+    "twilio": "^5.5.1",
     "typescript": "^5.8.2",
     "vaul": "^1.1.2",
     "zod": "^3.24.2"

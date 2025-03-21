@@ -31,7 +31,9 @@ import {
   updateTicket, 
   deleteTicket, 
   getClientsForSelection, 
-  getTeamMembersForAssignment 
+  getTeamMembersForAssignment,
+  deleteTimeEntry,
+  addTicketComment
 } from './actions';
 import { SplitView } from '../../components/split-view';
 import { Label } from '@/components/ui/label';
@@ -69,19 +71,41 @@ import { TimeEntryForm } from '../../components/time-entry-form';
 import { ExpenseForm } from '../../components/expense-form';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Service Ticket type definition
+// Define the ServiceTicket type more accurately to match what comes from the database
 type ServiceTicket = {
   id: number;
-  title: string;
-  client: string;
+  teamId: number;
   clientId: number;
-  assignedTo: string;
-  status: string; // Allow any string from the database
-  priority: string; // Allow any string from the database
-  category: string;
-  description?: string | null;
-  createdAt: Date;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  category: string | null;
+  assignedTo: number | null;
   dueDate: Date | null;
+  createdBy: number;
+  createdAt: Date;
+  updatedAt: Date;
+  closedAt: Date | null;
+  deletedAt: Date | null;
+  metadata: any;
+  client: {
+    id: number;
+    name: string;
+    // ... other client properties
+  };
+  assignedUser: {
+    id: number;
+    name: string;
+    email: string;
+    // ... other user properties
+  } | null;
+  createdByUser: {
+    id: number;
+    name: string;
+    email: string;
+    // ... other user properties
+  };
 };
 
 // Client type
@@ -90,171 +114,38 @@ type Client = {
   name: string;
 };
 
-// Demo data
-const demoTickets: ServiceTicket[] = [
-  {
-    id: 1,
-    title: 'Website downtime issue',
-    client: 'Acme Corporation',
-    clientId: 1,
-    assignedTo: 'Jane Smith',
-    status: 'open',
-    priority: 'high',
-    category: 'Website',
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 2,
-    title: 'Email configuration issue',
-    client: 'Globex Inc',
-    clientId: 2,
-    assignedTo: 'John Doe',
-    status: 'in-progress',
-    priority: 'medium',
-    category: 'Email',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 3,
-    title: 'Server backup failure',
-    client: 'Wayne Enterprises',
-    clientId: 3,
-    assignedTo: 'Jane Smith',
-    status: 'open',
-    priority: 'critical',
-    category: 'Server',
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 0.5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 4,
-    title: 'New user setup request',
-    client: 'Stark Industries',
-    clientId: 4,
-    assignedTo: 'John Doe',
-    status: 'completed',
-    priority: 'low',
-    category: 'User Management',
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-    dueDate: null,
-  },
-  {
-    id: 5,
-    title: 'VPN connection issues',
-    client: 'Oscorp',
-    clientId: 5,
-    assignedTo: 'Jane Smith',
-    status: 'on-hold',
-    priority: 'medium',
-    category: 'Networking',
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 6,
-    title: 'Data recovery request',
-    client: 'Umbrella Corporation',
-    clientId: 6,
-    assignedTo: 'John Doe',
-    status: 'in-progress',
-    priority: 'high',
-    category: 'Data Services',
-    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 7,
-    title: 'Software license renewal',
-    client: 'Cyberdyne Systems',
-    clientId: 7,
-    assignedTo: 'Jane Smith',
-    status: 'open',
-    priority: 'medium',
-    category: 'Licensing',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 8,
-    title: 'Hardware replacement request',
-    client: 'LexCorp',
-    clientId: 8,
-    assignedTo: 'John Doe',
-    status: 'completed',
-    priority: 'low',
-    category: 'Hardware',
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-    dueDate: null,
-  },
-  {
-    id: 9,
-    title: 'Cloud storage expansion',
-    client: 'Weyland-Yutani Corp',
-    clientId: 9,
-    assignedTo: 'Jane Smith',
-    status: 'closed',
-    priority: 'medium',
-    category: 'Cloud Services',
-    createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
-    dueDate: null,
-  },
-  {
-    id: 10,
-    title: 'Network security audit',
-    client: 'Tyrell Corporation',
-    clientId: 10,
-    assignedTo: 'John Doe',
-    status: 'in-progress',
-    priority: 'high',
-    category: 'Security',
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  },
-];
+// Type definitions for time entries and expenses
+type TimeEntry = {
+  id: number;
+  ticketId: number;
+  clientId: number;
+  description: string;
+  startTime: Date;
+  duration: number; // in minutes
+  billable: boolean;
+  billed: boolean;
+  user: {
+    id: number;
+    name: string;
+  };
+};
 
-const demoClients: Client[] = [
-  { id: 1, name: 'Acme Corporation' },
-  { id: 2, name: 'Globex Inc' },
-  { id: 3, name: 'Wayne Enterprises' },
-  { id: 4, name: 'Stark Industries' },
-  { id: 5, name: 'Oscorp' },
-  { id: 6, name: 'Umbrella Corporation' },
-  { id: 7, name: 'Cyberdyne Systems' },
-  { id: 8, name: 'LexCorp' },
-  { id: 9, name: 'Weyland-Yutani Corp' },
-  { id: 10, name: 'Tyrell Corporation' },
-];
+type Expense = {
+  id: number;
+  ticketId: number | null;
+  clientId: number;
+  description: string;
+  amount: string | number;  // Allow both string and number
+  date: Date;
+  category: string | null;  // Allow null
+  billable: boolean;
+  billed: boolean; // Add this to match schema
+  receiptUrl?: string | null;
+  deletedAt?: Date | null;
+  userId?: number;  // Make this optional to match demo data
+};
 
-// Demo comments for the first ticket
-const demoComments: Comment[] = [
-  {
-    id: 1,
-    ticketId: 1,
-    content: 'Called the client and they reported that the website is down since this morning.',
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    isInternal: false,
-    user: {
-      id: 1,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-    },
-  },
-  {
-    id: 2,
-    ticketId: 1,
-    content: 'Checked server logs, found spike in traffic before outage.',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    isInternal: true,
-    user: {
-      id: 2,
-      name: 'John Doe',
-      email: 'john@example.com',
-    },
-  },
-];
-
+// UI helper constants
 const statusColors: Record<string, string> = {
   'open': 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
   'in-progress': 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
@@ -270,82 +161,6 @@ const priorityIcons: Record<string, React.ReactNode> = {
   'critical': <AlertTriangle className="h-4 w-4 text-red-700 dark:text-red-500" />,
 };
 
-// Type definitions for time entries and expenses
-type TimeEntry = {
-  id: number;
-  ticketId: number | null;
-  clientId: number;
-  description: string;
-  startTime: Date;
-  duration: number; // in minutes
-  billable: boolean;
-  deletedAt?: Date | null;
-  user: {
-    id: number;
-    name: string | null;
-    email?: string;
-  } | null;
-};
-
-type Expense = {
-  id: number;
-  ticketId: number | null;
-  clientId: number;
-  description: string;
-  amount: string | number;  // Allow both string and number
-  date: Date;
-  category: string | null;  // Allow null
-  billable: boolean;
-  receiptUrl?: string | null;
-  deletedAt?: Date | null;
-  userId?: number;  // Make this optional to match demo data
-  billed?: boolean; // Add this to match API response
-};
-
-// Demo time entries
-const demoTimeEntries: TimeEntry[] = [
-  {
-    id: 1,
-    ticketId: 1,
-    clientId: 1,
-    description: "Server diagnostics and initial troubleshooting",
-    startTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    duration: 45, // 45 minutes
-    billable: true,
-    user: {
-      id: 1,
-      name: "Jane Smith"
-    }
-  },
-  {
-    id: 2,
-    ticketId: 1,
-    clientId: 1,
-    description: "Configuration review and server restart attempts",
-    startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    duration: 30, // 30 minutes
-    billable: true,
-    user: {
-      id: 2,
-      name: "John Doe"
-    }
-  }
-];
-
-// Demo expenses
-const demoExpenses: Expense[] = [
-  {
-    id: 1,
-    ticketId: 1,
-    clientId: 1,  // Add clientId
-    description: "Emergency server parts",
-    amount: 156.99,
-    date: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    category: "Hardware",
-    billable: true
-  }
-];
-
 // Status history to track ticket progress
 type StatusChange = {
   id: number;
@@ -358,49 +173,6 @@ type StatusChange = {
   };
 };
 
-const demoStatusHistory: StatusChange[] = [
-  {
-    id: 1,
-    ticketId: 1,
-    status: "open",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    user: {
-      id: 1,
-      name: "Jane Smith"
-    }
-  },
-  {
-    id: 2,
-    ticketId: 1,
-    status: "in-progress",
-    timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000),
-    user: {
-      id: 2,
-      name: "John Doe"
-    }
-  },
-  {
-    id: 3,
-    ticketId: 1,
-    status: "on-hold",
-    timestamp: new Date(Date.now() - 10 * 60 * 60 * 1000),
-    user: {
-      id: 2,
-      name: "John Doe"
-    }
-  },
-  {
-    id: 4,
-    ticketId: 1,
-    status: "in-progress",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    user: {
-      id: 1,
-      name: "Jane Smith"
-    }
-  }
-];
-
 // Ticket detail pane component
 function TicketDetailPane({ 
   ticket, 
@@ -411,8 +183,10 @@ function TicketDetailPane({
   onLogTime,
   onAddExpense,
   onUpdateTicket,
+  onDeleteTimeEntry,
   clients,
-  teamMembers
+  teamMembers,
+  onCommentAdded
 }: { 
   ticket: ServiceTicket | null;
   comments: Comment[];
@@ -431,6 +205,8 @@ function TicketDetailPane({
     receiptUrl?: string;
   }) => void;
   onUpdateTicket: (id: number, data: Partial<ServiceTicket>) => Promise<void>;
+  onDeleteTimeEntry: (id: number) => Promise<void>;
+  onCommentAdded: (commentData: Partial<Comment> & { content: string }) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'activity' | 'time' | 'expenses'>('activity');
   const [isEditing, setIsEditing] = useState(false);
@@ -576,7 +352,7 @@ function TicketDetailPane({
                       </select>
                     </div>
                   ) : (
-                    <span>Client: {displayData.client}</span>
+                    <span>Client: {typeof displayData.client === 'object' ? displayData.client.name : displayData.client}</span>
                   )}
                 </div>
                 <div className="flex items-center">
@@ -784,10 +560,7 @@ function TicketDetailPane({
                 <TicketComments
                   ticketId={ticket.id}
                   comments={comments.filter(c => c.ticketId === ticket.id)}
-                  onCommentAdded={(comment) => {
-                    // Handle comment added at the detail pane level if needed
-                    console.log('Comment added:', comment);
-                  }}
+                  onCommentAdded={onCommentAdded}
                 />
               </div>
             </div>
@@ -832,25 +605,30 @@ function TicketDetailPane({
                               <div className="font-medium text-gray-900 dark:text-foreground">
                                 {entry.description}
                               </div>
-                              <span className="text-sm text-gray-500 dark:text-muted-foreground">
-                                {durationStr}
-                              </span>
+                              <div className="flex items-center">
+                                <span className="text-sm text-gray-500 dark:text-muted-foreground mr-2">
+                                  {durationStr}
+                                </span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                  onClick={() => onDeleteTimeEntry(entry.id)}
+                                  title="Delete time entry"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete time entry</span>
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="text-sm text-gray-500 dark:text-muted-foreground">
-                                {entry.user?.name || 'Unknown'} • {formatDistanceToNow(entry.startTime, { addSuffix: true })}
-                              </div>
-                              <div>
-                                {entry.billable ? (
-                                  <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full">
-                                    Billable
-                                  </span>
-                                ) : (
-                                  <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 rounded-full">
-                                    Non-billable
-                                  </span>
-                                )}
-                              </div>
+                            <div className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
+                              <span className="font-medium">{entry.user?.name}</span>
+                              <span className="mx-1">·</span>
+                              <span>{new Date(entry.startTime).toLocaleString()}</span>
+                              <span className="mx-1">·</span>
+                              <span className={entry.billable ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}>
+                                {entry.billable ? 'Billable' : 'Non-billable'}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -949,32 +727,41 @@ export default function TicketsPage() {
   const [completedTickets, setCompletedTickets] = useState<ServiceTicket[]>([]);
   const [selectedTab, setSelectedTab] = useState('active');
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null);
-  const [comments, setComments] = useState<Comment[]>(demoComments);
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(demoTimeEntries);
-  const [expenses, setExpenses] = useState<Expense[]>(demoExpenses);
-  const [statusHistory, setStatusHistory] = useState<StatusChange[]>(demoStatusHistory);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [statusHistory, setStatusHistory] = useState<StatusChange[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: number; name: string; email: string }[]>([]);
   
-  // Fetch clients
+  // Fetch clients and team members
   useEffect(() => {
-    const fetchClients = async () => {
+    const fetchData = async () => {
       try {
-        const result = await getClientsForSelection();
-        if (result.error) {
-          console.error('Error fetching clients:', result.error);
-          // Keep demo clients as fallback if needed
-          setClients(demoClients);
-        } else if (result.clients) {
-          setClients(result.clients);
+        // Fetch clients
+        const clientsResult = await getClientsForSelection();
+        if (clientsResult.error) {
+          console.error('Error fetching clients:', clientsResult.error);
+        } else if (clientsResult.clients) {
+          setClients(clientsResult.clients);
+        }
+        
+        // Fetch team members
+        const teamMembersResult = await getTeamMembersForAssignment();
+        if (teamMembersResult.error) {
+          console.error('Error fetching team members:', teamMembersResult.error);
+        } else if (teamMembersResult.members) {
+          setTeamMembers(teamMembersResult.members.map(member => ({
+            ...member,
+            name: member.name || 'Unknown'
+          })));
         }
       } catch (error) {
-        console.error('Failed to fetch clients:', error);
-        // Use demo clients as fallback
-        setClients(demoClients);
+        console.error('Failed to fetch data:', error);
       }
     };
     
-    fetchClients();
+    fetchData();
   }, []);
 
   // Define a handler for row clicks
@@ -1086,13 +873,23 @@ export default function TicketsPage() {
         }
         
         if (result.tickets) {
-          setTickets(result.tickets);
-          setActiveTickets(result.tickets.filter(t => 
+          const ticketsWithMetadata = result.tickets.map(ticket => ({
+            ...ticket,
+            metadata: {},
+            clientId: ticket.clientId || 0,
+            client: ticket.client || { id: 0, name: 'Unknown' },
+            assignedUser: ticket.assignedUser || null,
+            createdByUser: ticket.createdByUser || { id: 0, name: 'Unknown', email: '' },
+            createdBy: ticket.createdBy || 0
+          }));
+          
+          setTickets(ticketsWithMetadata as ServiceTicket[]);
+          setActiveTickets(ticketsWithMetadata.filter(t => 
             t.status === 'open' || t.status === 'in-progress' || t.status === 'on-hold'
-          ));
-          setCompletedTickets(result.tickets.filter(t => 
+          ) as ServiceTicket[]);
+          setCompletedTickets(ticketsWithMetadata.filter(t => 
             t.status === 'completed' || t.status === 'closed'
-          ));
+          ) as ServiceTicket[]);
         }
       } catch (error) {
         console.error('Failed to fetch tickets:', error);
@@ -1103,52 +900,89 @@ export default function TicketsPage() {
   }, []);
 
   // Handler for adding a new ticket
-  const handleCreateTicket = (ticketData: {
+  const handleCreateTicket = async (ticketData: {
     title: string;
     description: string;
     clientId: number;
     priority: 'low' | 'medium' | 'high' | 'critical';
     category: string;
   }) => {
-    // In a real app, you'd call an API to create the ticket
-    // For this demo, we'll just add it to the state
-    const client = clients.find(c => c.id === ticketData.clientId);
-    if (!client) return;
-
-    const newTicket: ServiceTicket = {
-      id: tickets.length + 1,
-      title: ticketData.title,
-      client: client.name,
-      clientId: client.id,
-      assignedTo: 'Jane Smith', // Default assignee
-      status: 'open',
-      priority: ticketData.priority,
-      category: ticketData.category,
-      createdAt: new Date(),
-      dueDate: null,
-    };
-
-    setTickets([newTicket, ...tickets]);
-    setActiveTickets([newTicket, ...activeTickets]);
+    try {
+      const formData = new FormData();
+      Object.entries(ticketData).forEach(([key, value]) => {
+        formData.append(key, String(value));
+      });
+      
+      const result = await createTicket(ticketData, formData);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      if (result.ticket) {
+        // Update ticket with full details
+        const formattedTicket: ServiceTicket = {
+          ...result.ticket,
+          clientId: result.ticket.clientId || 0,
+          client: (result.ticket as any).client || { id: 0, name: 'Unknown' },
+          createdBy: result.ticket.createdBy || 0,
+          createdByUser: (result.ticket as any).createdByUser 
+            ? { 
+                id: (result.ticket as any).createdByUser.id, 
+                name: (result.ticket as any).createdByUser.name || 'Unknown', 
+                email: (result.ticket as any).createdByUser.email 
+              }
+            : { id: 0, name: 'Unknown', email: '' },
+          assignedUser: (result.ticket as any).assignedUser 
+            ? {
+                id: (result.ticket as any).assignedUser.id,
+                name: (result.ticket as any).assignedUser.name || 'Unknown',
+                email: (result.ticket as any).assignedUser.email
+              }
+            : null,
+          metadata: (result.ticket as any).metadata || {}
+        };
+        setSelectedTicket(formattedTicket);
+        toast.success('Ticket created successfully');
+      }
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      toast.error('Failed to create ticket');
+    }
   };
 
   // Handler for adding a comment (now a callback from TicketComments)
-  const handleAddComment = (commentData: Partial<Comment> & { content: string }) => {
-    // Create a proper Comment object with all required fields
-    const newComment: Comment = {
-      id: Date.now(), // Temporary ID until synced with server
-      ticketId: selectedTicket?.id || commentData.ticketId || 0,
-      content: commentData.content,
-      createdAt: new Date(),
-      isInternal: commentData.isInternal || false,
-      user: {
-        id: 1, // Current user ID (should be replaced with actual user data)
-        name: 'Current User', // Placeholder (should be replaced with actual user data)
-        email: 'user@example.com' // Placeholder (should be replaced with actual user data)
+  const handleAddComment = async (commentData: Partial<Comment> & { content: string }) => {
+    if (!commentData.content.trim()) {
+      return; // Don't submit empty comments
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('ticketId', String(selectedTicket?.id || commentData.ticketId || 0));
+      formData.append('content', commentData.content);
+      formData.append('isInternal', String(commentData.isInternal || false));
+      
+      const result = await addTicketComment(
+        { ticketId: selectedTicket?.id || commentData.ticketId || 0 },
+        formData
+      );
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
       }
-    };
-
-    setComments([...comments, newComment]);
+      
+      if (result.comment) {
+        // Add the new comment to the state
+        setComments(prev => [...prev, result.comment]);
+        toast.success('Comment added successfully');
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      toast.error('Failed to add comment');
+    }
   };
 
   // Handler for logging time
@@ -1173,6 +1007,7 @@ export default function TicketsPage() {
       startTime: timeEntry.startTime,
       duration: timeEntry.duration,
       billable: timeEntry.billable,
+      billed: false,
       user: {
         id: 1, // Current user ID - in real app from auth
         name: 'Jane Smith', // Current user name - in real app from auth
@@ -1241,10 +1076,12 @@ export default function TicketsPage() {
       clientId: selectedTicket?.clientId || 1, // Use ticket's client ID or a fallback
       description: expense.description,
       amount: expense.amount,
-      date: new Date(),
+      date: (expense as any).date || (expense as any).createdAt || new Date(),
       category: expense.category,
       billable: expense.billable,
-      receiptUrl: expense.receiptUrl
+      billed: false,
+      receiptUrl: expense.receiptUrl,
+      userId: (expense as any).userId || undefined
     };
     
     // Update the local state
@@ -1307,9 +1144,12 @@ export default function TicketsPage() {
             ? { 
                 ...t, 
                 ...data,
-                // Handle special case for client name
+                // Handle special case for client
                 client: data.clientId 
-                  ? clients.find(c => c.id === data.clientId)?.name || t.client 
+                  ? { 
+                      id: data.clientId, 
+                      name: clients.find(c => c.id === data.clientId)?.name || 'Unknown' 
+                    }
                   : t.client
               } 
             : t
@@ -1354,6 +1194,31 @@ export default function TicketsPage() {
     } catch (error) {
       console.error('Error updating ticket:', error);
       toast.error('Failed to update ticket');
+      return Promise.reject(error);
+    }
+  };
+
+  // Add handler for deleting time entries
+  const handleDeleteTimeEntry = async (id: number) => {
+    try {
+      const result = await deleteTimeEntry({ id }, new FormData());
+      
+      if (result.error) {
+        toast.error(result.error);
+        return Promise.reject(result.error);
+      }
+      
+      if (result.success) {
+        toast.success(result.success);
+        // Update the local state by removing the deleted entry
+        setTimeEntries(timeEntries.filter(entry => entry.id !== id));
+        return Promise.resolve();
+      }
+      
+      return Promise.reject("Unknown error");
+    } catch (error) {
+      console.error('Error deleting time entry:', error);
+      toast.error('Failed to delete time entry');
       return Promise.reject(error);
     }
   };
@@ -1516,53 +1381,99 @@ export default function TicketsPage() {
       if (!selectedTicket) return;
       
       try {
-        // Fetch the full ticket details including time entries and expenses
-        const result = await getTicketById(selectedTicket.id);
+        console.log('Fetching ticket details for:', selectedTicket.id);
+        const result = await getTicketById(selectedTicket.id, new FormData());
         
         if (result.error) {
-          console.error('Error fetching ticket details:', result.error);
+          toast.error(result.error);
           return;
         }
         
+        // Update ticket with full details
         if (result.ticket) {
-          // Update time entries if available
-          if (result.timeEntries) {
-            setTimeEntries(prevEntries => {
-              // Merge with existing entries, prioritizing the new ones
-              const newEntryIds = new Set(result.timeEntries.map((entry: TimeEntry) => entry.id));
-              const filteredOldEntries = prevEntries.filter(entry => 
-                entry.ticketId !== selectedTicket.id || !newEntryIds.has(entry.id)
-              );
-              return [...result.timeEntries, ...filteredOldEntries];
-            });
-          }
-          
-          // Update expenses if available
-          if (result.expenses) {
-            setExpenses(prevExpenses => {
-              // Merge with existing expenses, prioritizing the new ones
-              const newExpenseIds = new Set(result.expenses.map((expense: Expense) => expense.id));
-              const filteredOldExpenses = prevExpenses.filter(expense => 
-                expense.ticketId !== selectedTicket.id || !newExpenseIds.has(expense.id)
-              );
-              return [...result.expenses, ...filteredOldExpenses];
-            });
-          }
-          
-          // Update comments if available
-          if (result.ticket.comments) {
-            setComments(prevComments => {
-              // Merge with existing comments, prioritizing the new ones
-              const newCommentIds = new Set(result.ticket.comments.map((comment: Comment) => comment.id));
-              const filteredOldComments = prevComments.filter(comment => 
-                comment.ticketId !== selectedTicket.id || !newCommentIds.has(comment.id)
-              );
-              return [...result.ticket.comments, ...filteredOldComments];
-            });
-          }
+          const formattedTicket: ServiceTicket = {
+            ...result.ticket,
+            clientId: result.ticket.clientId || 0,
+            client: (result.ticket as any).client || { id: 0, name: 'Unknown' },
+            createdBy: result.ticket.createdBy || 0,
+            createdByUser: (result.ticket as any).createdByUser 
+              ? { 
+                  id: (result.ticket as any).createdByUser.id, 
+                  name: (result.ticket as any).createdByUser.name || 'Unknown', 
+                  email: (result.ticket as any).createdByUser.email 
+                }
+              : { id: 0, name: 'Unknown', email: '' },
+            assignedUser: (result.ticket as any).assignedUser 
+              ? {
+                  id: (result.ticket as any).assignedUser.id,
+                  name: (result.ticket as any).assignedUser.name || 'Unknown',
+                  email: (result.ticket as any).assignedUser.email
+                }
+              : null,
+            metadata: (result.ticket as any).metadata || {}
+          };
+          setSelectedTicket(formattedTicket);
+        }
+        
+        // Update comments, timeEntries, and expenses
+        if (result.comments) {
+          setComments(prevComments => {
+            // Keep old comments for other tickets, add new ones for this ticket
+            const filteredOldComments = prevComments.filter(comment => comment.ticketId !== selectedTicket.id);
+            const formattedComments = result.comments.map(comment => ({
+              ...comment,
+              user: comment.user || { id: 0, name: 'Unknown', email: '' }
+            }));
+            return [...formattedComments, ...filteredOldComments];
+          });
+        }
+        
+        if (result.timeEntries) {
+          setTimeEntries(prevEntries => {
+            // Keep old entries for other tickets, add new ones for this ticket
+            const filteredOldEntries = prevEntries.filter(entry => entry.ticketId !== selectedTicket.id);
+            const formattedTimeEntries = result.timeEntries.map(entry => ({
+              id: entry.id,
+              ticketId: entry.ticketId || selectedTicket.id,
+              clientId: entry.clientId || selectedTicket.clientId,
+              description: entry.description || '',
+              startTime: entry.startTime || new Date(),
+              duration: entry.duration || 0,
+              billable: entry.billable || false,
+              billed: entry.billed || false,
+              user: entry.user ? {
+                id: entry.user.id, 
+                name: entry.user.name || 'Unknown'
+              } : { id: 0, name: 'Unknown' }
+            }));
+            return [...formattedTimeEntries, ...filteredOldEntries];
+          });
+        }
+        
+        if (result.expenses) {
+          setExpenses(prevExpenses => {
+            // Keep old expenses for other tickets, add new ones for this ticket
+            const filteredOldExpenses = prevExpenses.filter(expense => expense.ticketId !== selectedTicket.id);
+            const formattedExpenses = result.expenses.map(expense => ({
+              id: expense.id,
+              ticketId: expense.ticketId || selectedTicket.id,
+              clientId: expense.clientId || selectedTicket.clientId,
+              description: expense.description || '',
+              amount: expense.amount || 0,
+              date: (expense as any).date || (expense as any).createdAt || new Date(),
+              category: expense.category,
+              billable: expense.billable || false,
+              billed: expense.billed || false,
+              receiptUrl: expense.receiptUrl || null,
+              deletedAt: expense.deletedAt || null,
+              userId: (expense as any).userId || undefined
+            }));
+            return [...formattedExpenses, ...filteredOldExpenses];
+          });
         }
       } catch (error) {
-        console.error('Failed to fetch ticket details:', error);
+        console.error('Error fetching ticket details:', error);
+        toast.error('Failed to load ticket details');
       }
     };
     
@@ -1778,7 +1689,10 @@ export default function TicketsPage() {
                 onLogTime={handleLogTime}
                 onAddExpense={handleAddExpense}
                 onUpdateTicket={handleUpdateTicket}
+                onDeleteTimeEntry={handleDeleteTimeEntry}
                 clients={clients}
+                teamMembers={teamMembers}
+                onCommentAdded={handleAddComment}
               />
             </div>
           </motion.div>

@@ -124,9 +124,13 @@ async function seedServiceData(userId: number, teamId: number) {
       for (const commentData of commentsData) {
         await db.insert(ticketComments).values({
           ticketId: ticket.id,
-          userId,
+          teamId,
+          createdBy: userId,
+          updatedBy: userId,
           content: commentData.content,
           isInternal: commentData.isInternal,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
       
@@ -137,6 +141,7 @@ async function seedServiceData(userId: number, teamId: number) {
         ticketId: ticket.id,
         clientId: client.id,
         userId,
+        teamId,
         description: 'Initial troubleshooting and analysis',
         startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
         duration: 45, // 45 minutes
@@ -149,11 +154,15 @@ async function seedServiceData(userId: number, teamId: number) {
           ticketId: ticket.id,
           clientId: client.id,
           userId,
+          teamId,
           description: 'Software license purchase',
           amount: '149.99',
-          date: new Date(),
           category: 'Software',
           billable: true,
+          createdBy: userId,
+          updatedBy: userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
     }

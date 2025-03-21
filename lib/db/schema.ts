@@ -17,10 +17,23 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  phoneNumber: varchar('phone_number', { length: 20 }),
+  phoneVerified: boolean('phone_verified').default(false),
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
   role: varchar('role', { length: 20 }).notNull().default('member'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
+});
+
+export const verificationCodes = pgTable('verification_codes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  code: varchar('code', { length: 10 }).notNull(),
+  type: varchar('type', { length: 20 }).notNull(), // 'phone_verification' or '2fa_login'
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  used: boolean('used').notNull().default(false),
 });
 
 export const teams = pgTable('teams', {
@@ -54,6 +67,9 @@ export const activityLogs = pgTable('activity_logs', {
     .references(() => teams.id),
   userId: integer('user_id').references(() => users.id),
   action: text('action').notNull(),
+  entityId: integer('entity_id'),  // ID of the entity being modified (client, ticket, etc.)
+  entityType: varchar('entity_type', { length: 50 }), // Type of entity (client, ticket, timeEntry, etc.)
+  details: json('details'), // JSON object containing before/after values or additional context
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   ipAddress: varchar('ip_address', { length: 45 }),
 });
@@ -72,69 +88,61 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
-// New tables for client management and service tracking
+// Common audit fields for all entities
+const auditFields = {
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
+  teamId: integer('team_id').notNull().references(() => teams.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+};
 
+// Update clients table with standard audit fields
 export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  name: varchar('name', { length: 100 }).notNull(),
-  contactName: varchar('contact_name', { length: 100 }),
-  email: varchar('email', { length: 255 }),
-  phone: varchar('phone', { length: 20 }),
+  name: varchar('name', { length: 255 }).notNull(),
+  contactName: varchar('contact_name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
   address: text('address'),
   notes: text('notes'),
   isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  deletedAt: timestamp('deleted_at'),
+  ...auditFields
 });
 
+// Update service tickets table with standard audit fields
 export const serviceTickets = pgTable('service_tickets', {
   id: serial('id').primaryKey(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  clientId: integer('client_id')
-    .notNull()
-    .references(() => clients.id),
-  assignedTo: integer('assigned_to')
-    .references(() => users.id),
-  title: varchar('title', { length: 200 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
+  category: varchar('category', { length: 100 }),
+  priority: varchar('priority', { length: 50 }).notNull().default('medium'),
   status: varchar('status', { length: 50 }).notNull().default('open'),
-  priority: varchar('priority', { length: 20 }).notNull().default('medium'),
-  category: varchar('category', { length: 50 }),
+  clientId: integer('client_id').references(() => clients.id),
+  assignedTo: integer('assigned_to').references(() => users.id),
   dueDate: timestamp('due_date'),
-  createdBy: integer('created_by')
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
   closedAt: timestamp('closed_at'),
-  deletedAt: timestamp('deleted_at'),
-  metadata: json('metadata'),
+  ...auditFields
 });
 
+// Update ticket comments with standard audit fields
 export const ticketComments = pgTable('ticket_comments', {
   id: serial('id').primaryKey(),
   ticketId: integer('ticket_id')
     .notNull()
     .references(() => serviceTickets.id),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id),
   content: text('content').notNull(),
+  attachments: json('attachments'),
   isInternal: boolean('is_internal').notNull().default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  ...auditFields
 });
 
+// Update time entries with standard audit fields
 export const timeEntries = pgTable('time_entries', {
   id: serial('id').primaryKey(),
-  ticketId: integer('ticket_id')
-    .references(() => serviceTickets.id),
+  ticketId: integer('ticket_id').references(() => serviceTickets.id),
   clientId: integer('client_id')
     .notNull()
     .references(() => clients.id),
@@ -143,37 +151,32 @@ export const timeEntries = pgTable('time_entries', {
     .references(() => users.id),
   description: text('description').notNull(),
   startTime: timestamp('start_time').notNull(),
-  endTime: timestamp('end_time'),
   duration: integer('duration').notNull(), // Duration in minutes
   billable: boolean('billable').notNull().default(true),
   billed: boolean('billed').notNull().default(false),
-  billableRate: decimal('billable_rate', { precision: 10, scale: 2 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  deletedAt: timestamp('deleted_at'),
+  billableRate: varchar('billable_rate', { length: 50 }),
+  ...auditFields
 });
 
+// Update expenses with standard audit fields
 export const expenses = pgTable('expenses', {
   id: serial('id').primaryKey(),
-  ticketId: integer('ticket_id')
-    .references(() => serviceTickets.id),
+  ticketId: integer('ticket_id').references(() => serviceTickets.id),
   clientId: integer('client_id')
     .notNull()
     .references(() => clients.id),
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
-  description: text('description').notNull(),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  date: timestamp('date').notNull(),
-  receiptUrl: text('receipt_url'),
+  description: text('description').notNull(),
+  category: varchar('category', { length: 100 }),
   billable: boolean('billable').notNull().default(true),
   billed: boolean('billed').notNull().default(false),
-  category: varchar('category', { length: 50 }),
   notes: text('notes'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  deletedAt: timestamp('deleted_at'),
+  receiptUrl: varchar('receipt_url', { length: 255 }),
+  receipt: json('receipt'),
+  ...auditFields
 });
 
 // Relations
@@ -269,7 +272,7 @@ export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
     references: [serviceTickets.id],
   }),
   user: one(users, {
-    fields: [ticketComments.userId],
+    fields: [ticketComments.createdBy],
     references: [users.id],
   }),
 }));
@@ -326,6 +329,9 @@ export type NewTimeEntry = typeof timeEntries.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type NewVerificationCode = typeof verificationCodes.$inferInsert;
+
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
@@ -333,22 +339,56 @@ export type TeamDataWithMembers = Team & {
 };
 
 export enum ActivityType {
+  // Authentication events
   SIGN_UP = 'SIGN_UP',
   SIGN_IN = 'SIGN_IN',
   SIGN_OUT = 'SIGN_OUT',
   UPDATE_PASSWORD = 'UPDATE_PASSWORD',
   DELETE_ACCOUNT = 'DELETE_ACCOUNT',
   UPDATE_ACCOUNT = 'UPDATE_ACCOUNT',
+  
+  // Team events
   CREATE_TEAM = 'CREATE_TEAM',
-  REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
+  TEAM_CREATED = 'TEAM_CREATED',
+  TEAM_UPDATED = 'TEAM_UPDATED',
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
+  REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
+  TEAM_INVITE_ACCEPTED = 'TEAM_INVITE_ACCEPTED',
+  TEAM_INVITE_REJECTED = 'TEAM_INVITE_REJECTED',
+  USER_INVITED = 'USER_INVITED',
+  USER_SIGNED_UP = 'USER_SIGNED_UP',
+  USER_JOINED_TEAM = 'USER_JOINED_TEAM',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
+  
+  // Ticket events
+  TICKET_CREATED = 'TICKET_CREATED',
+  TICKET_UPDATED = 'TICKET_UPDATED',
+  TICKET_DELETED = 'TICKET_DELETED',
+  TICKET_CLOSED = 'TICKET_CLOSED',
+  TICKET_REOPENED = 'TICKET_REOPENED',
+  TICKET_STATUS_UPDATED = 'TICKET_STATUS_UPDATED',
+  TICKET_ASSIGNED = 'TICKET_ASSIGNED',
+  
+  // Comment events
+  COMMENT_ADDED = 'COMMENT_ADDED',
+  
+  // Time tracking events
+  TIME_ENTRY_CREATED = 'TIME_ENTRY_CREATED',
+  TIME_ENTRY_UPDATED = 'TIME_ENTRY_UPDATED',
+  TIME_ENTRY_DELETED = 'TIME_ENTRY_DELETED',
+  
+  // Expense events
+  EXPENSE_CREATED = 'EXPENSE_CREATED',
+  EXPENSE_UPDATED = 'EXPENSE_UPDATED',
+  EXPENSE_DELETED = 'EXPENSE_DELETED',
+  
+  // Client events
   CLIENT_CREATED = 'CLIENT_CREATED',
   CLIENT_UPDATED = 'CLIENT_UPDATED',
   CLIENT_DELETED = 'CLIENT_DELETED',
-  TICKET_CREATED = 'TICKET_CREATED',
-  TICKET_UPDATED = 'TICKET_UPDATED',
-  TICKET_CLOSED = 'TICKET_CLOSED',
-  TIME_ENTRY_CREATED = 'TIME_ENTRY_CREATED',
-  EXPENSE_CREATED = 'EXPENSE_CREATED',
+  
+  // Subscription events
+  SUBSCRIPTION_CREATED = 'SUBSCRIPTION_CREATED',
+  SUBSCRIPTION_UPDATED = 'SUBSCRIPTION_UPDATED',
+  SUBSCRIPTION_CANCELLED = 'SUBSCRIPTION_CANCELLED'
 }

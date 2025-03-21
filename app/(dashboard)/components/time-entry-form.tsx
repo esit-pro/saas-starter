@@ -19,6 +19,7 @@ type TimeEntryFormProps = {
     startTime: Date;
     duration: number;
     billable: boolean;
+    billed: boolean;
   }) => void;
 };
 
@@ -70,7 +71,8 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
           description,
           duration: totalMinutes,
           startTime: startDateTime,
-          billable
+          billable,
+          billed: false
         },
         formData
       );
@@ -91,7 +93,8 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
             description,
             startTime: now,
             duration: totalMinutes,
-            billable
+            billable,
+            billed: false
           });
         }
         

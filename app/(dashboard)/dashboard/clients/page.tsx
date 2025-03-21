@@ -69,7 +69,7 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
         return;
       }
       
-      await onCreateClient({
+      onCreateClient({
         name,
         contactName,
         email,
@@ -77,7 +77,10 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
         address,
         notes,
         isActive,
-        deletedAt: null
+        deletedAt: null,
+        createdBy: null,
+        updatedBy: null,
+        deletedBy: null
       });
       
       // Reset form
@@ -537,7 +540,12 @@ export default function ClientsPage() {
       // Close the dialog immediately to improve UX
       setIsDialogOpen(false);
       
-      const result = await createClient(clientData, formData);
+      const result = await createClient({
+        ...clientData,
+        createdBy: null, // Will be set by the server
+        updatedBy: null, // Will be set by the server
+        deletedBy: null
+      }, formData);
       console.log('Server response:', result);
       
       if (result.error) {

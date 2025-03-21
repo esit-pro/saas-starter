@@ -18,7 +18,7 @@ import {
 import { ActivityType } from '@/lib/db/schema';
 import { getActivityLogs } from '@/lib/db/queries';
 
-const iconMap: Record<ActivityType, LucideIcon> = {
+const iconMap: Partial<Record<ActivityType, LucideIcon>> = {
   [ActivityType.SIGN_UP]: UserPlus,
   [ActivityType.SIGN_IN]: UserCog,
   [ActivityType.SIGN_OUT]: LogOut,
@@ -37,6 +37,15 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.TICKET_CLOSED]: CheckCircle,
   [ActivityType.TIME_ENTRY_CREATED]: Clock,
   [ActivityType.EXPENSE_CREATED]: Receipt,
+  [ActivityType.TEAM_CREATED]: UserPlus,
+  [ActivityType.TEAM_UPDATED]: Settings,
+  [ActivityType.USER_SIGNED_UP]: UserPlus,
+  [ActivityType.USER_INVITED]: Mail,
+  [ActivityType.TEAM_INVITE_ACCEPTED]: CheckCircle,
+  [ActivityType.TICKET_ASSIGNED]: Ticket,
+  [ActivityType.TIME_ENTRY_UPDATED]: Clock,
+  [ActivityType.EXPENSE_UPDATED]: Receipt,
+  [ActivityType.COMMENT_ADDED]: Mail
 };
 
 function getRelativeTime(date: Date) {
@@ -91,6 +100,24 @@ function formatAction(action: ActivityType): string {
       return 'You created a time entry';
     case ActivityType.EXPENSE_CREATED:
       return 'You created an expense';
+    case ActivityType.TEAM_CREATED:
+      return 'Team was created';
+    case ActivityType.TEAM_UPDATED:
+      return 'Team was updated';
+    case ActivityType.USER_SIGNED_UP:
+      return 'New user signed up';
+    case ActivityType.USER_INVITED:
+      return 'User was invited';
+    case ActivityType.TEAM_INVITE_ACCEPTED:
+      return 'User accepted invitation';
+    case ActivityType.TICKET_ASSIGNED:
+      return 'Ticket was assigned';
+    case ActivityType.TIME_ENTRY_UPDATED:
+      return 'Time entry was updated';
+    case ActivityType.EXPENSE_UPDATED:
+      return 'Expense was updated';
+    case ActivityType.COMMENT_ADDED:
+      return 'Comment was added';
     default:
       return 'Unknown action occurred';
   }
@@ -102,6 +129,10 @@ interface ActivityLog {
   timestamp: string | Date;
   ipAddress: string | null;
   userName: string | null;
+  entityId: number | null;
+  entityType: string | null;
+  entityName: string | null;
+  details: Record<string, any> | null | unknown;
 }
 
 // Mark this route as dynamic since it uses cookies
@@ -134,18 +165,60 @@ export default async function ActivityPage() {
                   log.action as ActivityType
                 );
 
+                // Extract additional information when available
+                let entityInfo = '';
+                if (log.entityType && log.entityId) {
+                  entityInfo = log.entityName 
+                    ? ` - ${log.entityName}`
+                    : ` - ${log.entityType} #${log.entityId}`;
+                }
+
+                // Extract meaningful details from the details JSON
+                let detailsInfo = '';
+                if (log.details) {
+                  const details = log.details as any;
+                  if (details.created) {
+                    const name = details.created.name || details.created.title;
+                    if (name) {
+                      detailsInfo = `: "${name}"`;
+                    }
+                  } else if (details.deleted) {
+                    const name = details.deleted.name || details.deleted.title;
+                    if (name) {
+                      detailsInfo = `: "${name}"`;
+                    }
+                  } else if (details.before && details.after) {
+                    // Show what changed in updates
+                    const changes = [];
+                    for (const key in details.after) {
+                      if (details.before[key] !== details.after[key] && 
+                          key !== 'updatedAt' && key !== 'updatedBy') {
+                        changes.push(key);
+                      }
+                    }
+                    if (changes.length > 0) {
+                      detailsInfo = `: changed ${changes.join(', ')}`;
+                    }
+                  }
+                }
+
                 return (
-                  <li key={log.id} className="flex items-center space-x-4">
-                    <div className="bg-orange-100 rounded-full p-2">
+                  <li key={log.id} className="flex items-start space-x-4">
+                    <div className="bg-orange-100 rounded-full p-2 mt-1">
                       <Icon className="w-5 h-5 text-orange-600" />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
-                        {formattedAction}
+                        {formattedAction}{entityInfo}{detailsInfo}
                         {log.ipAddress && ` from IP ${log.ipAddress}`}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 flex items-center">
                         {getRelativeTime(new Date(log.timestamp))}
+                        {log.userName && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700">
+                            by {log.userName}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </li>

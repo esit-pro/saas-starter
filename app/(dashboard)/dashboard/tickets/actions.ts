@@ -5,7 +5,7 @@ import { db } from '@/lib/db/drizzle';
 import { serviceTickets, ActivityType, activityLogs, teams, teamMembers, users, clients, ticketComments, timeEntries, expenses } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 
 // Log ticket-related activities
 async function logTicketActivity(
@@ -240,19 +240,26 @@ export const deleteTicket = validatedActionWithUser(
       // Verify ticket belongs to this team
       const teamId = userTeamInfo.teamId;
       const existingTicket = await db.query.serviceTickets.findFirst({
-        where: (ticket, { and, eq: whereEq }) => 
-          and(whereEq(ticket.id, data.id), whereEq(ticket.teamId, teamId))
+        where: (ticket, { and, eq: whereEq, isNull: whereIsNull }) => 
+          and(
+            whereEq(ticket.id, data.id), 
+            whereEq(ticket.teamId, teamId),
+            whereIsNull(ticket.deletedAt)
+          )
       });
 
       if (!existingTicket) {
         return { error: 'Ticket not found or not authorized to delete' };
       }
 
-      // In a real application, you might want to check for dependencies
-      // before deleting (comments, time entries, expenses)
-      
+      // Soft delete by setting the deletedAt timestamp
+      // This preserves all relationships while hiding the ticket from active views
       const [deletedTicket] = await db
-        .delete(serviceTickets)
+        .update(serviceTickets)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
         .where(eq(serviceTickets.id, data.id))
         .returning();
 
@@ -318,50 +325,27 @@ export async function getTicketsForTeam(_formData?: FormData) {
     const teamId = userTeamInfo.teamId;
     console.log('Fetching tickets for teamId:', teamId);
     
-    // Get ticket list with client and assignee info
-    const ticketList = await db
-      .select({
-        ticket: serviceTickets,
-        client: {
-          id: clients.id,
-          name: clients.name
-        },
-        assignedUser: {
-          id: users.id,
-          name: users.name,
-          email: users.email
-        }
-      })
-      .from(serviceTickets)
-      .leftJoin(clients, eq(serviceTickets.clientId, clients.id))
-      .leftJoin(users, eq(serviceTickets.assignedTo, users.id))
-      .where(eq(serviceTickets.teamId, teamId as number))
-      .orderBy(desc(serviceTickets.createdAt));
+    const ticketList = await db.query.serviceTickets.findMany({
+      where: (ticket, { and, eq: whereEq, isNull: whereIsNull }) => 
+        and(whereEq(ticket.teamId, teamId as number), whereIsNull(ticket.deletedAt)),
+      with: {
+        client: true,
+        assignedUser: true,
+        createdByUser: true,
+      },
+      orderBy: (ticket, { desc }) => [desc(ticket.createdAt)]
+    });
     
     console.log('Fetched tickets:', ticketList);
 
-    // Transform the data for the frontend
-    const formattedTickets = ticketList.map(item => ({
-      id: item.ticket.id,
-      title: item.ticket.title,
-      client: item.client?.name || 'Unknown Client',
-      clientId: item.client?.id || 0,
-      assignedTo: item.assignedUser?.name || 'Unassigned',
-      status: item.ticket.status,
-      priority: item.ticket.priority,
-      category: item.ticket.category || 'Uncategorized',
-      createdAt: item.ticket.createdAt,
-      dueDate: item.ticket.dueDate
-    }));
-
-    return { tickets: formattedTickets };
+    return { tickets: ticketList };
   } catch (error) {
     console.error('Failed to fetch tickets:', error);
     return { error: 'Failed to fetch tickets. Please try again.' };
   }
 }
 
-// Get a specific ticket by ID with full details
+// Get a specific ticket by ID
 export async function getTicketById(id: number, _formData?: FormData) {
   const user = await getUser();
   if (!user) return { error: 'User not authenticated' };
@@ -369,7 +353,7 @@ export async function getTicketById(id: number, _formData?: FormData) {
   let userTeamInfo = await getUserWithTeam(user.id);
   console.log('Get ticket by ID - user team info:', userTeamInfo);
   
-  // Skip team creation for read operations - this should already be created from other operations
+  // Skip team creation for read operations
   if (!userTeamInfo?.teamId) {
     return { error: 'User is not part of a team' };
   }
@@ -378,45 +362,41 @@ export async function getTicketById(id: number, _formData?: FormData) {
     const teamId = userTeamInfo.teamId;
     console.log(`Fetching ticket with ID: ${id} for team: ${teamId}`);
     
+    // Get ticket with related data
     const ticket = await db.query.serviceTickets.findFirst({
-      where: (ticket, { and, eq: whereEq }) => 
-        and(whereEq(ticket.id, id), whereEq(ticket.teamId, teamId)),
+      where: (ticket, { and, eq: whereEq, isNull: whereIsNull }) => 
+        and(
+          whereEq(ticket.id, id), 
+          whereEq(ticket.teamId, teamId as number),
+          isNull(ticket.deletedAt)
+        ),
       with: {
         client: true,
-        assignedUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        createdByUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        comments: {
-          with: {
-            user: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: (comment, { desc }) => [desc(comment.createdAt)],
-        },
-      },
+        assignedUser: true,
+        createdByUser: true,
+      }
     });
 
     if (!ticket) {
       return { error: 'Ticket not found' };
     }
 
-    // Get time entries for this ticket
+    // Get comments for this ticket
+    const comments = await db.query.ticketComments.findMany({
+      where: eq(ticketComments.ticketId, id),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: [desc(ticketComments.createdAt)]
+    });
+
+    // Get time entries for this ticket, excluding deleted ones
     const timeEntriesData = await db
       .select({
         timeEntry: timeEntries,
@@ -428,8 +408,13 @@ export async function getTicketById(id: number, _formData?: FormData) {
       })
       .from(timeEntries)
       .leftJoin(users, eq(timeEntries.userId, users.id))
-      .where(eq(timeEntries.ticketId, id))
-      .orderBy(desc(timeEntries.createdAt));
+      .where(
+        and(
+          eq(timeEntries.ticketId, id),
+          isNull(timeEntries.deletedAt)
+        )
+      )
+      .orderBy(desc(timeEntries.startTime));
 
     // Get expenses for this ticket
     const expensesData = await db
@@ -440,6 +425,7 @@ export async function getTicketById(id: number, _formData?: FormData) {
 
     return { 
       ticket,
+      comments,
       timeEntries: timeEntriesData.map(item => ({
         ...item.timeEntry,
         user: item.user
@@ -486,9 +472,11 @@ export const addTicketComment = validatedActionWithUser(
         .insert(ticketComments)
         .values({
           ticketId: data.ticketId,
-          userId: user.id,
+          teamId,
           content: data.content,
           isInternal: data.isInternal,
+          createdBy: user.id,
+          updatedBy: user.id,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -532,6 +520,10 @@ const logTimeSchema = z.object({
   billable: z.preprocess(
     (val) => val === 'true' || val === true,
     z.boolean().default(true)
+  ),
+  billed: z.preprocess(
+    (val) => val === 'true' || val === true,
+    z.boolean().default(false)
   ),
   billableRate: z.preprocess(
     (val) => val ? Number(val) : undefined,
@@ -577,10 +569,12 @@ export const logTimeEntry = validatedActionWithUser(
           ticketId: data.ticketId || null,
           clientId: data.clientId,
           userId: user.id,
+          teamId: teamId,
           description: data.description,
           startTime: new Date(data.startTime),
           duration: data.duration,
           billable: data.billable,
+          billed: data.billed,
           billableRate: data.billableRate ? data.billableRate.toString() : null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -611,6 +605,60 @@ export const logTimeEntry = validatedActionWithUser(
     } catch (error) {
       console.error('Failed to log time:', error);
       return { error: 'Failed to log time. Please try again.' };
+    }
+  }
+);
+
+// Delete a time entry (soft delete)
+const deleteTimeEntrySchema = z.object({
+  id: z.preprocess((val) => Number(val), z.number()),
+});
+
+export const deleteTimeEntry = validatedActionWithUser(
+  deleteTimeEntrySchema,
+  async (data, _, user) => {
+    let userTeamInfo = await getUserWithTeam(user.id);
+    if (!userTeamInfo?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      // Verify time entry belongs to this team and user
+      const teamId = userTeamInfo.teamId;
+      const existingTimeEntry = await db.query.timeEntries.findFirst({
+        where: (entry, { and, eq: whereEq, isNull: whereIsNull }) => 
+          and(
+            whereEq(entry.id, data.id), 
+            whereEq(entry.teamId, teamId),
+            isNull(entry.deletedAt)
+          )
+      });
+
+      if (!existingTimeEntry) {
+        return { error: 'Time entry not found or not authorized to delete' };
+      }
+
+      // Soft delete by setting the deletedAt timestamp
+      const [deletedTimeEntry] = await db
+        .update(timeEntries)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(timeEntries.id, data.id))
+        .returning();
+
+      await logTicketActivity(
+        teamId,
+        user.id,
+        ActivityType.TIME_ENTRY_UPDATED,  // Using updated as there's no specific delete type
+        existingTimeEntry.ticketId || undefined
+      );
+
+      return { success: 'Time entry deleted successfully' };
+    } catch (error) {
+      console.error('Failed to delete time entry:', error);
+      return { error: 'Failed to delete time entry. Please try again.' };
     }
   }
 );
@@ -669,13 +717,15 @@ export const addExpense = validatedActionWithUser(
           ticketId: data.ticketId || null,
           clientId: data.clientId,
           userId: user.id,
+          teamId,
           description: data.description,
           amount: data.amount.toString(),
-          date: new Date(data.date),
           category: data.category || null,
           billable: data.billable,
           notes: data.notes || null,
           receiptUrl: data.receiptUrl || null,
+          createdBy: user.id,
+          updatedBy: user.id,
           createdAt: new Date(),
           updatedAt: new Date(),
         })

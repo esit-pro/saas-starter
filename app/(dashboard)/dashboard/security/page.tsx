@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
-import { startTransition, useOptimistic } from 'react';
-import { useFormState } from 'react-dom';
+import { startTransition, useOptimistic, use, useActionState } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
+import { TwoFactorAuthForm } from '@/app/settings/components/two-factor-auth-form';
+import { useUser } from '@/lib/auth';
 
 type ActionState = {
   error?: string;
@@ -15,13 +16,16 @@ type ActionState = {
 };
 
 export default function SecurityPage() {
-  const [passwordState, passwordAction] = useFormState<
+  const { userPromise } = useUser();
+  const user = use(userPromise);
+  
+  const [passwordState, passwordAction] = useActionState<
     ActionState,
     FormData
   >(updatePassword, { error: '', success: '' });
   const [isPasswordPending, startPasswordTransition] = useOptimistic(false);
 
-  const [deleteState, deleteAction] = useFormState<
+  const [deleteState, deleteAction] = useActionState<
     ActionState,
     FormData
   >(deleteAccount, { error: '', success: '' });
@@ -57,6 +61,9 @@ export default function SecurityPage() {
       <h1 className="text-2xl font-bold text-foreground">
         Security Settings
       </h1>
+      
+      {user && <TwoFactorAuthForm user={user} />}
+      
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Password</CardTitle>
@@ -106,8 +113,9 @@ export default function SecurityPage() {
             )}
             <Button
               type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              variant="default"
               disabled={isPasswordPending}
+              className="dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-800 bg-white hover:bg-white/90 border border-input"
             >
               {isPasswordPending ? (
                 <>

@@ -6,6 +6,8 @@ import { clients, ActivityType, activityLogs, teams, teamMembers } from '@/lib/d
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
+import { logDeleteActivity } from '@/lib/utils/activity-logger';
+import { createWithAudit, updateWithAudit, softDeleteWithAudit } from '@/lib/utils/audit-trail';
 
 // Log client-related activities
 async function logClientActivity(
@@ -98,24 +100,16 @@ export const createClient = validatedActionWithUser(
         teamId,
       });
       
-      const [newClient] = await db
-        .insert(clients)
-        .values({
-          ...data,
-          teamId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
+      // Use the audit trail utility for creation
+      const newClient = await createWithAudit(
+        clients,
+        data,
+        user.id,
+        teamId,
+        'client'
+      );
         
       console.log('Client created successfully:', newClient);
-
-      await logClientActivity(
-        teamId,
-        user.id,
-        ActivityType.CLIENT_CREATED,
-        newClient.id
-      );
 
       return { 
         success: 'Client created successfully',
@@ -163,20 +157,14 @@ export const updateClient = validatedActionWithUser(
         return { error: 'Client not found or not authorized to modify' };
       }
 
-      const [updatedClient] = await db
-        .update(clients)
-        .set({
-          ...data,
-          updatedAt: new Date(),
-        })
-        .where(eq(clients.id, data.id))
-        .returning();
-
-      await logClientActivity(
-        teamId,
+      // Use the audit trail utility for updates
+      const updatedClient = await updateWithAudit(
+        clients,
+        data.id,
+        data,
         user.id,
-        ActivityType.CLIENT_UPDATED,
-        updatedClient.id
+        teamId,
+        'client'
       );
 
       return { 
@@ -219,23 +207,13 @@ export const deleteClient = validatedActionWithUser(
         return { error: 'Client not found or not authorized to delete' };
       }
 
-      // Soft delete by setting the deletedAt timestamp
-      // This preserves all relationships while hiding the client from active views
-      const [deletedClient] = await db
-        .update(clients)
-        .set({
-          deletedAt: new Date(),
-          updatedAt: new Date()
-        })
-        .where(eq(clients.id, data.id))
-        .returning();
-
-      // Add a CLIENT_DELETED activity type to ActivityType enum in schema.ts when convenient
-      await logClientActivity(
-        teamId,
+      // Use the audit trail utility for soft deletion
+      await softDeleteWithAudit(
+        clients,
+        data.id,
         user.id,
-        ActivityType.CLIENT_UPDATED,  // Using updated as there's no specific delete activity type
-        deletedClient.id
+        teamId,
+        'client'
       );
 
       return { success: 'Client deleted successfully' };
