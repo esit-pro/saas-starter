@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, sql, or } from 'drizzle-orm';
+import { desc, and, eq, isNull, sql, or, not, gte, lte } from 'drizzle-orm';
 import { db } from './drizzle';
 import { 
   activityLogs, 
@@ -211,11 +211,11 @@ export async function deleteClient(clientId: number) {
 
 // Service ticket queries
 
-export async function getServiceTickets(teamId: number, filters?: {
+export async function getServiceTicketsByFilters(teamId: number, filters?: {
   clientId?: number;
   status?: string;
   assignedTo?: number;
-}) {
+}, limit?: number) {
   let conditions = [eq(serviceTickets.teamId, teamId)];
   
   if (filters?.clientId) {
@@ -230,7 +230,7 @@ export async function getServiceTickets(teamId: number, filters?: {
     conditions.push(eq(serviceTickets.assignedTo, filters.assignedTo));
   }
 
-  return await db
+  let baseQuery = db
     .select({
       ticket: serviceTickets,
       client: clients,
@@ -241,6 +241,11 @@ export async function getServiceTickets(teamId: number, filters?: {
     .leftJoin(users, eq(serviceTickets.assignedTo, users.id))
     .where(and(...conditions))
     .orderBy(desc(serviceTickets.createdAt));
+    
+  // Apply limit if provided
+  const result = limit ? baseQuery.limit(limit) : baseQuery;
+  
+  return await result;
 }
 
 export async function getServiceTicket(ticketId: number) {
@@ -563,59 +568,147 @@ export async function updateExpense(
 
 // Dashboard & reporting queries
 
+/**
+ * Get client summary data for dashboard
+ */
 export async function getClientSummary(teamId: number) {
-  const clientCount = await db
-    .select({ count: sql<number>`count(*)` })
+  // Fetch all clients for the team
+  const clientsResult = await db
+    .select({
+      id: clients.id,
+      name: clients.name,
+      isActive: clients.isActive,
+    })
     .from(clients)
-    .where(eq(clients.teamId, teamId))
-    .then(result => result[0].count);
-
+    .where(eq(clients.teamId, teamId));
+  
+  // Count total clients and active clients
+  const totalClients = clientsResult.length;
+  const activeClients = clientsResult.filter(c => c.isActive).length;
+  
+  // Count active tickets
   const activeTicketsCount = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql`count(*)` })
     .from(serviceTickets)
-    .where(and(
-      eq(serviceTickets.teamId, teamId),
-      sql`${serviceTickets.status} != 'closed'`
-    ))
-    .then(result => result[0].count);
-
-  return { clientCount, activeTicketsCount };
+    .where(
+      and(
+        eq(serviceTickets.teamId, teamId),
+        not(eq(serviceTickets.status, 'closed')),
+        not(eq(serviceTickets.status, 'completed'))
+      )
+    )
+    .then(result => Number(result[0]?.count || 0));
+  
+  return {
+    totalClients,
+    activeClients,
+    activeTicketsCount
+  };
 }
 
-export async function getTimeTrackingSummary(teamId: number, period: { startDate: Date, endDate: Date }) {
-  const result = await db
+/**
+ * Get time tracking summary data for dashboard
+ */
+export async function getTimeTrackingSummary(
+  teamId: number, 
+  dateRange: { startDate: Date; endDate: Date }
+) {
+  // Get all time entries in date range
+  const timeEntriesData = await db
     .select({
-      totalHours: sql<number>`sum(${timeEntries.duration}) / 60.0`,
-      billableHours: sql<number>`sum(case when ${timeEntries.billable} = true then ${timeEntries.duration} else 0 end) / 60.0`,
-      billedHours: sql<number>`sum(case when ${timeEntries.billed} = true then ${timeEntries.duration} else 0 end) / 60.0`,
+      duration: timeEntries.duration,
+      billable: timeEntries.billable,
+      billed: timeEntries.billed,
+      billableRate: timeEntries.billableRate
     })
     .from(timeEntries)
-    .innerJoin(clients, eq(timeEntries.clientId, clients.id))
-    .where(and(
-      eq(clients.teamId, teamId),
-      sql`${timeEntries.startTime} >= ${period.startDate}`,
-      sql`${timeEntries.startTime} <= ${period.endDate}`
-    ));
-
-  return result[0];
+    .where(
+      and(
+        eq(timeEntries.teamId, teamId),
+        gte(timeEntries.startTime, dateRange.startDate),
+        lte(timeEntries.startTime, dateRange.endDate)
+      )
+    );
+  
+  // Calculate total hours (convert minutes to hours)
+  const totalMinutes = timeEntriesData.reduce((sum: number, entry) => sum + entry.duration, 0);
+  const totalHours = Math.round(totalMinutes / 60);
+  
+  // Calculate billable hours
+  const billableMinutes = timeEntriesData
+    .filter(entry => entry.billable)
+    .reduce((sum: number, entry) => sum + entry.duration, 0);
+  const billableHours = Math.round(billableMinutes / 60);
+  
+  // Calculate billed hours
+  const billedMinutes = timeEntriesData
+    .filter(entry => entry.billable && entry.billed)
+    .reduce((sum: number, entry) => sum + entry.duration, 0);
+  const billedHours = Math.round(billedMinutes / 60);
+  
+  // Calculate billable amount (if rates are set)
+  const totalBillableAmount = timeEntriesData
+    .filter(entry => entry.billable)
+    .reduce((sum: number, entry) => {
+      const rate = entry.billableRate ? parseFloat(entry.billableRate.toString()) : 0;
+      return sum + (rate * (entry.duration / 60));
+    }, 0);
+  
+  return {
+    totalHours,
+    billableHours,
+    billedHours,
+    totalBillableAmount
+  };
 }
 
-export async function getExpenseSummary(teamId: number, period: { startDate: Date, endDate: Date }) {
-  const result = await db
+/**
+ * Get expense summary data for dashboard
+ */
+export async function getExpenseSummary(
+  teamId: number, 
+  dateRange: { startDate: Date; endDate: Date }
+) {
+  // Get all expenses in date range
+  const expenseData = await db
     .select({
-      totalExpenses: sql<number>`sum(${expenses.amount})`,
-      billableExpenses: sql<number>`sum(case when ${expenses.billable} = true then ${expenses.amount} else 0 end)`,
-      billedExpenses: sql<number>`sum(case when ${expenses.billed} = true then ${expenses.amount} else 0 end)`,
+      amount: expenses.amount,
+      billable: expenses.billable,
+      billed: expenses.billed
     })
     .from(expenses)
     .innerJoin(clients, eq(expenses.clientId, clients.id))
-    .where(and(
-      eq(clients.teamId, teamId),
-      sql`${expenses.date} >= ${period.startDate}`,
-      sql`${expenses.date} <= ${period.endDate}`
-    ));
-
-  return result[0];
+    .where(
+      and(
+        eq(clients.teamId, teamId),
+        gte(expenses.date, dateRange.startDate),
+        lte(expenses.date, dateRange.endDate)
+      )
+    );
+  
+  // Calculate totals
+  const totalExpenses = expenseData.reduce((sum, expense) => {
+    return sum + parseFloat(expense.amount.toString());
+  }, 0);
+  
+  const billableExpenses = expenseData
+    .filter(expense => expense.billable)
+    .reduce((sum, expense) => {
+      return sum + parseFloat(expense.amount.toString());
+    }, 0);
+  
+  const billedExpenses = expenseData
+    .filter(expense => expense.billable && expense.billed)
+    .reduce((sum, expense) => {
+      return sum + parseFloat(expense.amount.toString());
+    }, 0);
+  
+  return {
+    totalExpenses,
+    billableExpenses,
+    billedExpenses,
+    totalBillableAmount: billableExpenses
+  };
 }
 
 export async function getTimeByClient(teamId: number, period: { startDate: Date, endDate: Date }) {
@@ -653,4 +746,73 @@ export async function getTimeByUser(teamId: number, period: { startDate: Date, e
     ))
     .groupBy(users.id, users.name)
     .orderBy(desc(sql<number>`sum(${timeEntries.duration})`));
+}
+
+/**
+ * Get monthly revenue data for dashboard charts
+ * Combines time entries and expenses to calculate revenue by month
+ */
+export async function getRevenueByMonth(teamId: number, year: number) {
+  // Get all months for the given year
+  const startDate = new Date(year, 0, 1); // January 1st
+  const endDate = new Date(year, 11, 31); // December 31st
+  
+  // Get billable time entries grouped by month
+  const timeEntryRevenue = await db
+    .select({
+      month: sql<string>`to_char(${timeEntries.startTime}, 'Mon')`,
+      revenue: sql<number>`sum(${timeEntries.duration} * 
+        CASE WHEN ${timeEntries.billableRate} IS NULL THEN 0 
+        ELSE ${timeEntries.billableRate}::numeric END / 60.0)`,
+    })
+    .from(timeEntries)
+    .innerJoin(clients, eq(timeEntries.clientId, clients.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      eq(timeEntries.billable, true),
+      sql`EXTRACT(YEAR FROM ${timeEntries.startTime}) = ${year}`
+    ))
+    .groupBy(sql`to_char(${timeEntries.startTime}, 'Mon')`)
+    .orderBy(sql`to_char(${timeEntries.startTime}, 'Mon')`);
+    
+  // Get expenses grouped by month
+  const expenseRevenue = await db
+    .select({
+      month: sql<string>`to_char(${expenses.date}, 'Mon')`,
+      expenses: sql<number>`sum(${expenses.amount}::numeric)`,
+    })
+    .from(expenses)
+    .innerJoin(clients, eq(expenses.clientId, clients.id))
+    .where(and(
+      eq(clients.teamId, teamId),
+      sql`EXTRACT(YEAR FROM ${expenses.date}) = ${year}`
+    ))
+    .groupBy(sql`to_char(${expenses.date}, 'Mon')`)
+    .orderBy(sql`to_char(${expenses.date}, 'Mon')`);
+    
+  // Create a map for all months
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const revenueData = months.map(month => ({
+    month,
+    Revenue: 0,
+    Expenses: 0
+  }));
+  
+  // Fill in time entry revenue
+  timeEntryRevenue.forEach(entry => {
+    const monthIndex = months.findIndex(m => m === entry.month);
+    if (monthIndex >= 0) {
+      revenueData[monthIndex].Revenue = Number(entry.revenue);
+    }
+  });
+  
+  // Fill in expense data
+  expenseRevenue.forEach(entry => {
+    const monthIndex = months.findIndex(m => m === entry.month);
+    if (monthIndex >= 0) {
+      revenueData[monthIndex].Expenses = Number(entry.expenses);
+    }
+  });
+  
+  return revenueData;
 }

@@ -17,10 +17,23 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  phoneNumber: varchar('phone_number', { length: 20 }),
+  phoneVerified: boolean('phone_verified').default(false),
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
   role: varchar('role', { length: 20 }).notNull().default('member'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
+});
+
+export const verificationCodes = pgTable('verification_codes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  code: varchar('code', { length: 10 }).notNull(),
+  type: varchar('type', { length: 20 }).notNull(), // 'phone_verification' or '2fa_login'
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  used: boolean('used').notNull().default(false),
 });
 
 export const teams = pgTable('teams', {
@@ -139,6 +152,9 @@ export const timeEntries = pgTable('time_entries', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
   description: text('description').notNull(),
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time'),
@@ -321,6 +337,9 @@ export type TimeEntry = typeof timeEntries.$inferSelect;
 export type NewTimeEntry = typeof timeEntries.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type NewVerificationCode = typeof verificationCodes.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

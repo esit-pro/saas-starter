@@ -16,6 +16,7 @@ import {
   type NewActivityLog,
   ActivityType,
   invitations,
+  verificationCodes,
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
@@ -26,6 +27,7 @@ import {
   validatedAction,
   validatedActionWithUser,
 } from '@/lib/auth/middleware';
+import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -87,6 +89,33 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
+  // Check if 2FA is enabled
+  if (foundUser.twoFactorEnabled) {
+    // Generate and send 2FA code
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    
+    await db.insert(verificationCodes).values({
+      userId: foundUser.id,
+      code,
+      type: '2fa_login',
+      expiresAt,
+    });
+    
+    if (foundUser.phoneNumber) {
+      await send2FACode(foundUser.phoneNumber, code);
+    } else {
+      console.error('User has 2FA enabled but no phone number');
+    }
+    
+    // Return success but with 2FA required flag
+    return {
+      requiresTwoFactor: true,
+      email,
+    };
+  }
+
+  // Normal sign-in flow if 2FA is not enabled
   await Promise.all([
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
@@ -102,9 +131,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 });
 
 const signUpSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
   email: z.string().email(),
   password: z.string().min(8),
   confirmPassword: z.string().min(8),
+  phoneNumber: z.string().min(10, 'Valid phone number is required'),
   inviteId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -112,7 +143,7 @@ const signUpSchema = z.object({
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const { email, password, inviteId, name, phoneNumber } = data;
 
   const existingUser = await db
     .select()
@@ -132,7 +163,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const newUser: NewUser = {
     email,
+    name,
     passwordHash,
+    phoneNumber,
     role: 'owner', // Default role, will be overridden if there's an invitation
   };
 

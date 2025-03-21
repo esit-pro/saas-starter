@@ -11,6 +11,7 @@ import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signIn, signUp } from '../actions';
 import { ActionState } from '@/lib/auth/middleware';
+import { useRouter } from 'next/navigation';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
   mode?: 'signin' | 'signup';
@@ -36,6 +37,51 @@ export function UserAuthForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [formIsValid, setFormIsValid] = useState(mode === 'signin');
+  
+  // 2FA state
+  const [showTwoFactorForm, setShowTwoFactorForm] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState("");
+  const router = useRouter();
+
+  // Handle 2FA verification
+  const handleVerifyTwoFactor = async () => {
+    if (twoFactorCode.length !== 6) {
+      setTwoFactorError("Please enter a valid 6-digit code");
+      return;
+    }
+    
+    setVerifyingCode(true);
+    setTwoFactorError("");
+    
+    try {
+      const response = await fetch('/api/2fa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: twoFactorCode,
+          email: state.email,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Redirect after successful 2FA
+        router.push('/');
+      } else {
+        setTwoFactorError(data.error || "Invalid verification code");
+      }
+    } catch (error) {
+      setTwoFactorError("Failed to verify code. Please try again.");
+      console.error("2FA verification error:", error);
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   // Update validation status when passwords change
   useEffect(() => {
@@ -48,6 +94,13 @@ export function UserAuthForm({
     }
   }, [password, confirmPassword, mode]);
 
+  // Check if 2FA is required after form submission
+  useEffect(() => {
+    if (state.requiresTwoFactor) {
+      setShowTwoFactorForm(true);
+    }
+  }, [state]);
+
   // Handler for password input changes
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
@@ -58,6 +111,55 @@ export function UserAuthForm({
     setConfirmPassword(e.target.value);
   };
 
+  if (showTwoFactorForm) {
+    return (
+      <div className={cn('grid gap-6', className)} {...props}>
+        <div className="grid gap-2 text-center">
+          <h3 className="text-xl font-semibold">Two-Factor Authentication</h3>
+          <p className="text-sm text-muted-foreground">
+            Enter the verification code sent to your phone
+          </p>
+        </div>
+        
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="verificationCode">Verification Code</Label>
+            <Input
+              id="verificationCode"
+              type="text"
+              maxLength={6}
+              pattern="[0-9]*"
+              placeholder="6-digit code"
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+              autoComplete="one-time-code"
+              className="rounded-md text-center text-xl tracking-widest"
+            />
+          </div>
+          
+          {twoFactorError && (
+            <div className="text-sm font-medium text-destructive">{twoFactorError}</div>
+          )}
+          
+          <Button 
+            onClick={handleVerifyTwoFactor}
+            disabled={verifyingCode || twoFactorCode.length !== 6} 
+            className="w-full"
+          >
+            {verifyingCode ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              'Verify Code'
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('grid gap-6', className)} {...props}>
       <form action={formAction}>
@@ -66,6 +168,23 @@ export function UserAuthForm({
         <input type="hidden" name="inviteId" value={inviteId || ''} />
         
         <div className="grid gap-4">
+          {mode === 'signup' && (
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                maxLength={100}
+                placeholder="Your full name"
+                disabled={pending}
+                className="rounded-md"
+              />
+            </div>
+          )}
+          
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -109,42 +228,61 @@ export function UserAuthForm({
           </div>
           
           {mode === 'signup' && (
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword" className="flex justify-between">
-                <span>Confirm Password</span>
-                <div className="h-4 inline-flex items-center">
-                  {confirmPassword && (
-                    passwordsMatch ? (
-                      <span className="text-xs text-green-500 flex items-center">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Passwords match
-                      </span>
-                    ) : (
-                      <span className="text-xs text-destructive flex items-center">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Passwords don&apos;t match
-                      </span>
-                    )
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="confirmPassword" className="flex justify-between">
+                  <span>Confirm Password</span>
+                  <div className="h-4 inline-flex items-center">
+                    {confirmPassword && (
+                      passwordsMatch ? (
+                        <span className="text-xs text-green-500 flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Passwords match
+                        </span>
+                      ) : (
+                        <span className="text-xs text-destructive flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Passwords don&apos;t match
+                        </span>
+                      )
+                    )}
+                  </div>
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  required
+                  minLength={8}
+                  maxLength={100}
+                  placeholder="Confirm your password"
+                  disabled={pending}
+                  className={cn(
+                    "rounded-md",
+                    confirmPassword && !passwordsMatch && "border-red-500 focus-visible:ring-red-500"
                   )}
-                </div>
-              </Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={handleConfirmPasswordChange}
-                required
-                minLength={8}
-                maxLength={100}
-                placeholder="Confirm your password"
-                disabled={pending}
-                className={cn(
-                  "rounded-md",
-                  confirmPassword && !passwordsMatch && "border-red-500 focus-visible:ring-red-500"
-                )}
-              />
-            </div>
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  placeholder="+1 (555) 555-5555"
+                  disabled={pending}
+                  className="rounded-md"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required for two-factor authentication
+                </p>
+              </div>
+            </>
           )}
           
           {state?.error && (
