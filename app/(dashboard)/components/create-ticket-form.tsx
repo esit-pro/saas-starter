@@ -111,7 +111,7 @@ export function CreateTicketForm({ clients, onCreateTicket }: CreateTicketFormPr
             />
           </div>
           
-          <Button type="submit" className="w-full" disabled={!selectedClientId || !title.trim()}>
+          <Button type="submit" className="w-full" variant="form" disabled={!selectedClientId || !title.trim()}>
             Create Ticket
           </Button>
         </div>

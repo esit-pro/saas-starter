@@ -106,7 +106,7 @@ export function TimeEntryForm({ ticketId, clientId, onLogTime }: TimeEntryFormPr
         </div>
         
         <div className="mt-auto">
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" variant="form">
             Log Time
           </Button>
         </div>

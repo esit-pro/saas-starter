@@ -252,7 +252,7 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
             <Label htmlFor="isActive" className="font-normal">Active Client</Label>
           </div>
           
-          <Button type="submit" className="w-full" disabled={!name.trim() || !contactName.trim() || !email.trim()}>
+          <Button type="submit" className="w-full" variant="form" disabled={!name.trim() || !contactName.trim() || !email.trim()}>
             Create Client
           </Button>
         </div>

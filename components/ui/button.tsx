@@ -20,7 +20,9 @@ const buttonVariants = cva(
         card:
           'bg-secondary text-secondary-foreground dark:bg-primary/5 dark:text-primary shadow-sm hover:bg-secondary/80 dark:hover:bg-primary/10',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline'
+        link: 'text-primary underline-offset-4 hover:underline',
+        form: 
+          'bg-black text-white shadow-sm border border-zinc-600 hover:bg-black/90'
       },
       size: {
         default: 'h-9 px-4 py-2',

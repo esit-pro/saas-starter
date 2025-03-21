@@ -136,7 +136,7 @@ export function ExpenseForm({ ticketId, onAddExpense }: ExpenseFormProps) {
         </Label>
       </div>
       
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" className="w-full" variant="form" disabled={isSubmitting}>
         {isSubmitting ? 'Adding Expense...' : 'Add Expense'}
       </Button>
     </form>

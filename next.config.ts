@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   experimental: {
-    ppr: true,
+    // ppr: true, // Disabled as it requires Next.js canary version
     turbo: {
       loaders: {
         // Add any specific loaders you need to configure here

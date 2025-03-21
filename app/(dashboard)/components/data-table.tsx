@@ -284,120 +284,15 @@ export function DataTable<TData extends { id: number }, TValue>({
                         );
                       };
                       
+                      // This should actually render the row data, not "No results found"
                       return (
-                        <ContextMenuRow
-                          key={row.id}
-                          row={row}
-                          renderContextMenu={renderContextMenu}
-                          asChild={true}
-                          disabled={isDeleting}
-                          title={onDelete ? "Swipe left to delete" : ""}
-                        >
-                          <motion.tr
-                            layout
-                            initial={{ opacity: 1, x: 0 }}
-                            exit={{ 
-                              x: "-100%", // First slide left out of view
-                              opacity: 0,  // Fade out while sliding
-                              height: 0,   // Then collapse height
-                              marginTop: 0,
-                              marginBottom: 0,
-                              transition: {
-                                duration: 0.6,
-                                times: [0, 0.4, 1], // Control timing of each phase
-                                x: { duration: 0.3, ease: "easeOut" },
-                                opacity: { duration: 0.3 },
-                                height: { 
-                                  delay: 0.3, // Delay height collapse to create brief empty space
-                                  duration: 0.3,
-                                  ease: [0.33, 1, 0.68, 1] // Custom cubic bezier for "gravity" feeling
-                                }
-                              }
-                            }}
-                            animate={isDeleting ? {
-                              x: "-100%",
-                              opacity: 0,
-                              height: 0,
-                              marginTop: 0,
-                              marginBottom: 0,
-                              transition: {
-                                duration: 0.6,
-                                times: [0, 0.4, 1],
-                                x: { duration: 0.3, ease: "easeOut" },
-                                opacity: { duration: 0.3 },
-                                height: { 
-                                  delay: 0.3,
-                                  duration: 0.3,
-                                  ease: [0.33, 1, 0.68, 1] 
-                                }
-                              }
-                            } : {
-                              opacity: 1,
-                              x: swipeX,
-                              height: "auto"
-                            }}
-                            drag="x"
-                            dragDirectionLock
-                            dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={0.1}
-                            onDragEnd={(_, info) => handleSwipeEnd(rowData.id, info)}
-                            dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
-                            className="border-b border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-primary/5 relative"
-                            onClick={(e) => {
-                              // Stop the event from propagating up and causing a redirect
-                              e.preventDefault();
-                              e.stopPropagation();
-                              
-                              // More comprehensive check for dropdown menu elements
-                              // Check if click is on dropdown menu, button, or any menu-related element
-                              const target = e.target as HTMLElement;
-                              const isDropdownMenuClick = 
-                                target.closest('[role="menuitem"]') || 
-                                target.closest('[data-state="open"]') || 
-                                target.closest('[data-radix-popper-content-wrapper]') ||
-                                // Check for the action cell content by class
-                                target.closest('.action-cell-content') ||
-                                // Check for the MoreHorizontal icon or its container button
-                                target.closest('button:has(svg[data-lucide="more-horizontal"])') ||
-                                target.closest('svg[data-lucide="more-horizontal"]');
-                                
-                              // Only trigger click handler if not clicking on dropdown elements
-                              if (onRowClick && !isDropdownMenuClick) {
-                                onRowClick(row.original);
-                              }
-                            }}
-                          >
-                            <div 
-                              className="absolute inset-y-0 right-0 flex items-center pr-4 bg-red-500 text-white -mr-16 w-16 justify-center"
-                              style={{ opacity: swipeX < -20 ? Math.min(1, Math.abs(swipeX) / 100) : 0 }}
-                            >
-                              Delete
-                            </div>
-                            
-                            {row.getVisibleCells().map((cell) => (
-                              <td 
-                                key={cell.id} 
-                                className={`p-4 align-middle whitespace-nowrap ${
-                                  cell.column.id === 'actions' ? 'text-right w-[60px]' : ''
-                                }`}
-                              >
-                                <div 
-                                  className={`${
-                                    cell.column.id === 'actions' 
-                                      ? 'flex justify-end action-cell-content' 
-                                      : 'flex items-center min-w-0'
-                                  }`}
-                                  onClick={cell.column.id === 'actions' ? (e) => {
-                                    // Stop propagation for actions cell content
-                                    e.stopPropagation();
-                                  } : undefined}
-                                >
-                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </div>
-                              </td>
-                            ))}
-                          </motion.tr>
-                        </ContextMenuRow>
+                        <tr key={row.id}>
+                          {row.getVisibleCells().map(cell => (
+                            <td key={cell.id} className="p-4">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
                       );
                     })}
                   </AnimatePresence>
