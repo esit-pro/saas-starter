@@ -142,7 +142,7 @@ dependencies:
     version: 0.30.5
   drizzle-orm:
     specifier: ^0.40.1
-    version: 0.40.1
+    version: 0.40.1(postgres@3.4.5)
   eslint:
     specifier: ^9.22.0
     version: 9.22.0
@@ -167,6 +167,9 @@ dependencies:
   postcss:
     specifier: ^8.5.3
     version: 8.5.3
+  postgres:
+    specifier: ^3.4.5
+    version: 3.4.5
   radix-ui:
     specifier: ^1.1.3
     version: 1.1.3(@types/react-dom@19.0.4)(@types/react@19.0.10)(react-dom@19.0.0)(react@19.0.0)
@@ -3428,7 +3431,7 @@ packages:
       - supports-color
     dev: false
 
-  /drizzle-orm@0.40.1:
+  /drizzle-orm@0.40.1(postgres@3.4.5):
     resolution: {integrity: sha512-aPNhtiJiPfm3qxz1czrnIDkfvkSdKGXYeZkpG55NPTVI186LmK2fBLMi4dsHpPHlJrZeQ92D322YFPHADBALew==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
@@ -3516,6 +3519,8 @@ packages:
         optional: true
       sqlite3:
         optional: true
+    dependencies:
+      postgres: 3.4.5
     dev: false
 
   /dunder-proto@1.0.1:
@@ -5039,6 +5044,11 @@ packages:
       nanoid: 3.3.10
       picocolors: 1.1.1
       source-map-js: 1.2.1
+    dev: false
+
+  /postgres@3.4.5:
+    resolution: {integrity: sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg==}
+    engines: {node: '>=12'}
     dev: false
 
   /prelude-ls@1.2.1:
