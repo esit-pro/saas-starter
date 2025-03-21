@@ -322,13 +322,56 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
 ]
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+function DraggableRow({ 
+  row, 
+  isBeingDeleted, 
+  onDelete 
+}: { 
+  row: Row<z.infer<typeof schema>>;
+  isBeingDeleted?: boolean;
+  onDelete: () => void;
+}) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
+    disabled: isBeingDeleted, // Disable dragging during deletion
   });
 
+  // Add a reference to track swipe gesture
+  const rowRef = React.useRef<HTMLDivElement>(null);
+  
+  // Track swipe position
+  const [swipeOffset, setSwipeOffset] = React.useState(0);
+  
+  // Handle touch/mouse events for swipe 
+  const handleTouchStart = React.useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Implementation for touch start
+    // ...
+  }, []);
+
+  // Apply transformation based on deletion state or dragging
+  const rowTransform = React.useMemo(() => {
+    if (isBeingDeleted) {
+      // Only apply horizontal transform for deleted rows
+      return 'translateX(-100%)';
+    }
+    
+    // For other rows, keep the original DnD transform which is vertical only
+    return CSS.Transform.toString(transform);
+  }, [isBeingDeleted, transform]);
+  
+  // Apply transition based on state
+  const rowTransition = React.useMemo(() => {
+    if (isBeingDeleted) {
+      // Use a consistent transition for deletion
+      return 'transform 300ms ease-out';
+    }
+    
+    // Otherwise use the DnD transition
+    return transition;
+  }, [isBeingDeleted, transition]);
+
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={rowRef}>
       {/* Delete button container - positioned as an overlay */}
       <div 
         className="absolute inset-0 flex items-center justify-end bg-red-500 text-white"
@@ -343,8 +386,8 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       <TableRow
         ref={setNodeRef}
         style={{
-          transform: CSS.Transform.toString(transform),
-          transition,
+          transform: rowTransform,
+          transition: rowTransition,
           position: 'relative',
           zIndex: 1,
           backgroundColor: 'var(--background)',
@@ -352,19 +395,54 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
         }}
         data-state={row.getIsSelected() && "selected"}
         data-dragging={isDragging}
+        data-deleting={isBeingDeleted}
       >
-        {row.getVisibleCells().map((cell) => (
-          <TableCell 
-            key={cell.id}
-            style={{
-              // Ensure cells maintain their width during deletion
-              width: cell.column.getSize(),
-              minWidth: cell.column.getSize(),
-            }}
-          >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </TableCell>
-        ))}
+        {row.getVisibleCells().map((cell) => {
+          // For the actions cell, add delete trigger
+          if (cell.column.id === 'actions') {
+            return (
+              <TableCell key={cell.id}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+                      size="icon"
+                    >
+                      <IconDotsVertical />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-32">
+                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                    <DropdownMenuItem>Make a copy</DropdownMenuItem>
+                    <DropdownMenuItem>Favorite</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      variant="destructive"
+                      onClick={onDelete} // Connect to delete handler
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            );
+          }
+          
+          // For all other cells, render normally
+          return (
+            <TableCell 
+              key={cell.id}
+              style={{
+                width: cell.column.getSize(),
+                minWidth: cell.column.getSize(),
+              }}
+            >
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </TableCell>
+          );
+        })}
       </TableRow>
     </div>
   );
@@ -398,6 +476,17 @@ export function DataTable({
     () => data?.map(({ id }) => id) || [],
     [data]
   )
+
+  const [rowsBeingDeleted, setRowsBeingDeleted] = React.useState<number[]>([])
+  
+  const handleDeleteRow = React.useCallback((id: number) => {
+    setRowsBeingDeleted(prev => [...prev, id])
+    
+    setTimeout(() => {
+      setData(current => current.filter(row => row.id !== id))
+      setRowsBeingDeleted(prev => prev.filter(rowId => rowId !== id))
+    }, 300)
+  }, [])
 
   const table = useReactTable({
     data,
@@ -550,25 +639,30 @@ export function DataTable({
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
                   >
-                    <AnimatePresence mode="popLayout">
-                      {table.getRowModel().rows.map((row) => (
-                        <motion.div
-                          key={row.id}
-                          initial={{ x: 0, opacity: 1 }}
-                          exit={{ 
-                            x: "-100%",
-                            opacity: 0,
-                            transition: {
-                              duration: 0.3,
-                              ease: "easeInOut"
-                            }
-                          }}
-                          layout
-                        >
-                          <DraggableRow row={row} />
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
+                    {table.getRowModel().rows.map((row) => (
+                      <motion.div
+                        key={row.id}
+                        layout="position"
+                        layoutId={`row-${row.id}`}
+                        transition={{
+                          type: "spring",
+                          bounce: 0.1,
+                          duration: 0.3,
+                          mass: 0.8,
+                          stiffness: 100
+                        }}
+                        style={{
+                          // Force only vertical animations for position changes
+                          x: 0
+                        }}
+                      >
+                        <DraggableRow 
+                          row={row} 
+                          isBeingDeleted={rowsBeingDeleted.includes(row.original.id)} 
+                          onDelete={() => handleDeleteRow(row.original.id)}
+                        />
+                      </motion.div>
+                    ))}
                   </SortableContext>
                 ) : (
                   <TableRow>
