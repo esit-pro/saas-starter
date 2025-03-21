@@ -196,7 +196,24 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
   );
 }
 
-function ClientDetailPane({ client }: { client: Client | null }) {
+function ClientDetailPane({ 
+  client, 
+  onUpdateClient 
+}: { 
+  client: Client | null;
+  onUpdateClient: (id: number, data: Partial<Client>) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<Partial<Client>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  
+  useEffect(() => {
+    // Reset state when client changes
+    setIsEditing(false);
+    setEditedData({});
+    setIsSaving(false);
+  }, [client?.id]);
+  
   if (!client) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -208,45 +225,142 @@ function ClientDetailPane({ client }: { client: Client | null }) {
       </div>
     );
   }
+  
+  const handleChange = (field: keyof Client, value: any) => {
+    setEditedData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  const handleSave = async () => {
+    if (Object.keys(editedData).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await onUpdateClient(client.id, editedData);
+      setIsEditing(false);
+      setEditedData({});
+      toast.success('Client updated successfully');
+    } catch (error) {
+      console.error('Error saving client:', error);
+      toast.error('Failed to update client');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Merge client data with edited data
+  const displayData = {
+    ...client,
+    ...editedData
+  };
 
   return (
     <div className="h-full overflow-auto">
       <div className="p-6 flex flex-col gap-6">
-        {/* Client header */}
-        <div className="flex items-center">
-          <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
-            <Users className="h-8 w-8" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{client.name}</h2>
-            <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center gap-4 mt-1">
-              <div className="flex items-center">
-                <span>Client #{client.id}</span>
-              </div>
-              <div className="flex items-center">
-                {client.isActive ? (
-                  <span className="flex items-center text-green-700 dark:text-green-500">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Active
-                  </span>
-                ) : (
-                  <span className="flex items-center text-red-700 dark:text-red-500">
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Inactive
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center">
-                <span>Created {formatDistanceToNow(new Date(client.createdAt), { addSuffix: true })}</span>
+        {/* Client header with edit button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
+              <Users className="h-8 w-8" />
+            </div>
+            <div>
+              {isEditing ? (
+                <Input
+                  value={displayData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                />
+              ) : (
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.name}</h2>
+              )}
+              <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center gap-4 mt-1">
+                <div className="flex items-center">
+                  <span>Client #{client.id}</span>
+                </div>
+                <div className="flex items-center">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <span>Status:</span>
+                      <Switch 
+                        checked={displayData.isActive}
+                        onCheckedChange={(checked) => handleChange('isActive', checked)}
+                      />
+                    </div>
+                  ) : (
+                    displayData.isActive ? (
+                      <span className="flex items-center text-green-700 dark:text-green-500">
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="flex items-center text-red-700 dark:text-red-500">
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Inactive
+                      </span>
+                    )
+                  )}
+                </div>
+                <div className="flex items-center">
+                  <span>Created {formatDistanceToNow(new Date(client.createdAt), { addSuffix: true })}</span>
+                </div>
               </div>
             </div>
+          </div>
+          <div>
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedData({});
+                  }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsEditing(true)}
+                className="flex items-center"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Contact information */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="border dark:border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Contact Information</h3>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-4 ${isEditing ? 'border-2 border-blue-200 dark:border-blue-900/40 rounded-lg p-2' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+              Contact Information
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+            </h3>
             <div className="space-y-3">
               <div className="flex items-center">
                 <div className="w-8">
@@ -254,11 +368,20 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Email</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">
-                    <a href={`mailto:${client.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
-                      {client.email}
-                    </a>
-                  </div>
+                  {isEditing ? (
+                    <Input
+                      type="email"
+                      value={displayData.email || ''}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      className="h-8 border-blue-300 dark:border-blue-700"
+                    />
+                  ) : (
+                    <div className="font-medium text-gray-900 dark:text-foreground">
+                      <a href={`mailto:${displayData.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
+                        {displayData.email}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center">
@@ -267,7 +390,18 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Phone</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">{client.phone || 'Not provided'}</div>
+                  {isEditing ? (
+                    <Input
+                      value={displayData.phone || ''}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                      placeholder="Enter phone number"
+                      className="h-8 border-blue-300 dark:border-blue-700"
+                    />
+                  ) : (
+                    <div className="font-medium text-gray-900 dark:text-foreground">
+                      {displayData.phone || 'Not provided'}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center">
@@ -276,13 +410,21 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Contact Person</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">{client.contactName}</div>
+                  {isEditing ? (
+                    <Input
+                      value={displayData.contactName || ''}
+                      onChange={(e) => handleChange('contactName', e.target.value)}
+                      className="h-8 border-blue-300 dark:border-blue-700"
+                    />
+                  ) : (
+                    <div className="font-medium text-gray-900 dark:text-foreground">{displayData.contactName}</div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="border dark:border-border rounded-lg p-4">
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Account Details</h3>
             <div className="space-y-3">
               <div className="flex items-center">
@@ -292,7 +434,7 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Status</div>
                   <div className="font-medium text-gray-900 dark:text-foreground">
-                    {client.isActive ? "Active" : "Inactive"}
+                    {displayData.isActive ? "Active" : "Inactive"}
                   </div>
                 </div>
               </div>
@@ -313,9 +455,18 @@ function ClientDetailPane({ client }: { client: Client | null }) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 dark:text-muted-foreground">Address</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">
-                    {client.address || 'Not provided'}
-                  </div>
+                  {isEditing ? (
+                    <Textarea
+                      value={displayData.address || ''}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      placeholder="Enter address"
+                      className="min-h-[60px] border-blue-300 dark:border-blue-700"
+                    />
+                  ) : (
+                    <div className="font-medium text-gray-900 dark:text-foreground">
+                      {displayData.address || 'Not provided'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -323,14 +474,21 @@ function ClientDetailPane({ client }: { client: Client | null }) {
         </div>
 
         {/* Notes Section */}
-        {client.notes && (
-          <div className="border dark:border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Notes</h3>
+        <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Notes</h3>
+          {isEditing ? (
+            <Textarea
+              value={displayData.notes || ''}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              placeholder="Enter notes about this client"
+              className="min-h-[120px] border-blue-300 dark:border-blue-700"
+            />
+          ) : (
             <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
-              {client.notes}
+              {displayData.notes || 'No notes provided.'}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -623,6 +781,39 @@ export default function ClientsPage() {
     />
   );
 
+  // Handler for updating a client
+  const handleUpdateClient = async (id: number, data: Partial<Client>) => {
+    try {
+      // Create form data for API call
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value?.toString() || '');
+      });
+      
+      // Update client in the database
+      const result = await updateClient({ id, ...data }, formData);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return Promise.reject(result.error);
+      }
+      
+      if (result.success) {
+        // Update local state to avoid refetching
+        setClients(clients.map(client => 
+          client.id === id ? { ...client, ...data } : client
+        ));
+        
+        return Promise.resolve();
+      }
+      
+      return Promise.reject("Unknown error");
+    } catch (error) {
+      console.error('Error updating client:', error);
+      return Promise.reject(error);
+    }
+  };
+
   // Setup the main view
   const tableView = (
     <div className="space-y-6">
@@ -686,7 +877,10 @@ export default function ClientsPage() {
               </Button>
             </div>
             <div className="p-4">
-              <ClientDetailPane client={selectedClient} />
+              <ClientDetailPane 
+                client={selectedClient} 
+                onUpdateClient={handleUpdateClient}
+              />
             </div>
           </motion.div>
         )}
