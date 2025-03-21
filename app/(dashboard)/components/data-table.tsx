@@ -19,7 +19,7 @@ import {
   ChevronsRight, 
   Import, 
   Plus, 
-  SlidersHorizontal 
+  SlidersHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ContextMenuRow } from '@/components/ui/context-menu-row';
 
 interface DataTableProps<TData, TValue> {
@@ -68,25 +68,30 @@ export function DataTable<TData extends { id: number }, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [deletingIds, setDeletingIds] = useState<number[]>([]);
   
-  // Handle row deletion with animation
+  // Row being deleted state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const rowHeight = 56; // Approximate height of a table row in pixels
+  
+  // Handle row deletion
   const handleDelete = async (id: number) => {
     if (!onDelete) return;
     
-    // Add the ID to the deleting list to trigger animation
-    setDeletingIds((prev) => [...prev, id]);
+    // Mark this row as deleting
+    setDeletingId(id);
     
-    // Delay the actual deletion to allow the animation to complete
+    // Allow time for the exit animation
     setTimeout(async () => {
       try {
+        // Actually delete the item after animation
         await onDelete(id);
       } catch (error) {
         console.error('Error deleting item:', error);
-        // Remove from deleting list if the deletion fails
-        setDeletingIds((prev) => prev.filter((itemId) => itemId !== id));
+      } finally {
+        // Always reset the deleting state
+        setDeletingId(null);
       }
-    }, 350); // Slightly longer than the animation duration
+    }, 400);
   };
 
   const table = useReactTable({
@@ -210,16 +215,15 @@ export function DataTable<TData extends { id: number }, TValue>({
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {table.getRowModel().rows?.length ? (
-                <AnimatePresence>
+                <AnimatePresence
+                  initial={false}
+                  mode="wait"
+                  onExitComplete={() => {
+                    // After all exit animations have completed
+                  }}>
                   {table.getRowModel().rows.map((row) => {
                     const rowData = row.original as TData;
-                    const isDeleting = deletingIds.includes(rowData.id);
-                    if (isDeleting) return null;
-                    
-                    // Extract the actions column to get its content
-                    const actionsColumn = row.getVisibleCells().find(
-                      cell => cell.column.id === 'actions'
-                    );
+                    const isDeleting = deletingId === rowData.id;
                     
                     // Get the context menu content for the row
                     const renderContextMenu = (row: any) => {
@@ -256,40 +260,71 @@ export function DataTable<TData extends { id: number }, TValue>({
                         row={row}
                         renderContextMenu={renderContextMenu}
                         asChild={true}
+                        disabled={false}
+                        title={onDelete ? "Swipe left to delete" : ""}
                       >
-                        <motion.tr
-                          layout
-                          initial={{ opacity: 1, x: 0 }}
-                          exit={{ 
-                            opacity: 0, 
-                            x: -100,
-                            transition: { duration: 0.3 }
-                          }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="border-b border-gray-200 dark:border-border transition-colors hover:bg-gray-50 dark:hover:bg-primary/5 cursor-pointer"
-                          onClick={(e) => {
-                            // Stop the event from propagating up and causing a redirect
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            // If there's a row click handler in meta, use it
-                            if (onRowClick) {
-                              onRowClick(row.original);
-                            }
-                          }}
+                          <motion.tr
+                            initial={{ opacity: 1 }}
+                            exit={{ 
+                              opacity: 0,
+                              height: 0
+                            }}
+                            animate={isDeleting ? {
+                              opacity: 0,
+                              height: 0
+                            } : {
+                              opacity: 1,
+                              height: "auto"
+                            }}
+                            transition={{
+                              duration: 0.2,
+                              ease: "easeInOut"
+                            }}
+                            className="border-b border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-primary/5 relative"
+                            onClick={(e) => {
+                              // Stop the event from propagating up and causing a redirect
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              // More comprehensive check for dropdown menu elements
+                              // Check if click is on dropdown menu, button, or any menu-related element
+                              const isDropdownMenuClick = 
+                                e.target.closest('[role="menuitem"]') || 
+                                e.target.closest('[data-state="open"]') || 
+                                e.target.closest('[data-radix-popper-content-wrapper]') ||
+                                // Check for the action cell content by class
+                                e.target.closest('.action-cell-content') ||
+                                // Check for the MoreHorizontal icon or its container button
+                                e.target.closest('button:has(svg[data-lucide="more-horizontal"])') ||
+                                e.target.closest('svg[data-lucide="more-horizontal"]');
+                                
+                              // Only trigger click handler if not clicking on dropdown elements
+                              if (onRowClick && !isDropdownMenuClick) {
+                                onRowClick(row.original);
+                              }
+                            }}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <motion.td 
-                              layout
+                            <td 
                               key={cell.id} 
                               className={`p-4 align-middle whitespace-nowrap ${
                                 cell.column.id === 'actions' ? 'text-right w-[60px]' : ''
                               }`}
                             >
-                              <div className={`${cell.column.id === 'actions' ? 'flex justify-end' : 'flex items-center min-w-0'}`}>
+                              <div 
+                                className={`${
+                                  cell.column.id === 'actions' 
+                                    ? 'flex justify-end action-cell-content' 
+                                    : 'flex items-center min-w-0'
+                                }`}
+                                onClick={cell.column.id === 'actions' ? (e) => {
+                                  // Stop propagation for actions cell content
+                                  e.stopPropagation();
+                                } : undefined}
+                              >
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                               </div>
-                            </motion.td>
+                            </td>
                           ))}
                         </motion.tr>
                       </ContextMenuRow>

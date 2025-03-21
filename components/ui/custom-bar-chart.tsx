@@ -102,6 +102,7 @@ const CustomBarChart: React.FC<BarChartProps> = ({
               fill={colorMap[colors[idx % colors.length]]}
               radius={[4, 4, 0, 0]}
               isAnimationActive={showAnimation}
+              activeBar={{ fillOpacity: 1 }}
             />
           ))}
         </BarChart>
