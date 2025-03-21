@@ -345,7 +345,7 @@ export function DataTable<TData extends { id: number }, TValue>({
                             dragConstraints={{ left: 0, right: 0 }}
                             dragElastic={0.1}
                             onDragEnd={(_, info) => handleSwipeEnd(rowData.id, info)}
-                            dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
+                            dragTransition={{ bounceStiffness: 300, bounceDamping: 60 }}
                             className="border-b border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-primary/5 relative"
                             onClick={(e) => {
                               e.preventDefault();
