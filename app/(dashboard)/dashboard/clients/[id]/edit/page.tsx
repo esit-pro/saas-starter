@@ -1,25 +1,11 @@
-import { getClientById } from '../../actions';
-import { Client } from '@/lib/db/schema';
-import ClientEditForm from './client-edit-form';
+'use client';
 
-export default async function EditClientPage({ params }: { params: { id: string } }) {
-  // Get client data on the server
-  const clientId = parseInt(params.id);
-  if (isNaN(clientId)) {
-    return <div className="text-center py-8">Invalid client ID</div>;
-  }
+import { useParams } from 'next/navigation';
+import { ClientEditForm } from './client-edit-form';
 
-  try {
-    const result = await getClientById(clientId);
-    
-    if (result.error || !result.client) {
-      return <div className="text-center py-8">{result.error || 'Client not found'}</div>;
-    }
-
-    // Pass client data to the client component
-    return <ClientEditForm initialClient={result.client} />;
-  } catch (error) {
-    console.error('Error fetching client:', error);
-    return <div className="text-center py-8">Failed to load client data</div>;
-  }
+export default function ClientEditPage() {
+  const params = useParams();
+  const id = typeof params.id === 'string' ? parseInt(params.id) : Array.isArray(params.id) ? parseInt(params.id[0]) : 0;
+  
+  return <ClientEditForm clientId={id} />;
 }

@@ -128,7 +128,9 @@
   - Receive data as props from parent server components
   - Handle form submissions, user input, and client-side interactions
   
-- **Hybrid Pattern**:
-  - For complex pages with dynamic routes, use server component for the route page
-  - Create client components for interactive sections (like forms)
-  - Example: `/clients/[id]/edit/page.tsx` (server) uses `client-edit-form.tsx` (client)
+- **Dynamic Route Patterns**:
+  - There are two approaches for dynamic route pages:
+    1. Server Component Pattern: Create a server component for the page component that receives params automatically
+    2. Client Component Pattern: Create a client component that accesses params via the useParams() hook
+  - For forms and interactive elements, the client component pattern is often simpler
+  - Example: `/clients/[id]/edit/page.tsx` uses client-side rendering with `useParams()`

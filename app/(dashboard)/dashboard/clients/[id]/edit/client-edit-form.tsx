@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,29 +10,73 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Loader2, SaveIcon, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateClient } from '../../actions';
+import { getClientById, updateClient } from '../../actions';
 import { Client } from '@/lib/db/schema';
 
 interface ClientEditFormProps {
-  initialClient: Client;
+  clientId: number;
 }
 
-export default function ClientEditForm({ initialClient }: ClientEditFormProps) {
+export function ClientEditForm({ clientId }: ClientEditFormProps) {
   const router = useRouter();
+  const [client, setClient] = useState<Client | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
   // Form state
-  const [name, setName] = useState(initialClient.name);
-  const [contactName, setContactName] = useState(initialClient.contactName || '');
-  const [email, setEmail] = useState(initialClient.email || '');
-  const [phone, setPhone] = useState(initialClient.phone || '');
-  const [address, setAddress] = useState(initialClient.address || '');
-  const [notes, setNotes] = useState(initialClient.notes || '');
-  const [isActive, setIsActive] = useState(initialClient.isActive);
+  const [name, setName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isActive, setIsActive] = useState(true);
+
+  // Load client data
+  useEffect(() => {
+    const fetchClient = async () => {
+      setIsLoading(true);
+      try {
+        if (isNaN(clientId) || clientId <= 0) {
+          toast.error('Invalid client ID');
+          router.push('/dashboard/clients');
+          return;
+        }
+
+        const result = await getClientById(clientId, new FormData());
+        if (result.error) {
+          toast.error(result.error);
+          router.push('/dashboard/clients');
+          return;
+        }
+
+        if (result.client) {
+          setClient(result.client);
+          // Initialize form with client data
+          setName(result.client.name);
+          setContactName(result.client.contactName || '');
+          setEmail(result.client.email || '');
+          setPhone(result.client.phone || '');
+          setAddress(result.client.address || '');
+          setNotes(result.client.notes || '');
+          setIsActive(result.client.isActive);
+        }
+      } catch (error) {
+        console.error('Error fetching client:', error);
+        toast.error('Failed to load client data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchClient();
+  }, [clientId, router]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!client) return;
     
     setIsSaving(true);
     try {
@@ -42,7 +86,7 @@ export default function ClientEditForm({ initialClient }: ClientEditFormProps) {
       }
       
       const clientData = {
-        id: initialClient.id,
+        id: client.id,
         name,
         contactName,
         email,
@@ -70,6 +114,15 @@ export default function ClientEditForm({ initialClient }: ClientEditFormProps) {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-gray-500 dark:text-muted-foreground">Loading client data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
