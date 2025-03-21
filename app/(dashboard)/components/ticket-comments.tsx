@@ -7,8 +7,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { addTicketComment } from '../dashboard/tickets/actions';
 
-type Comment = {
+export type Comment = {
   id: number;
+  ticketId: number;
   content: string;
   createdAt: Date;
   isInternal: boolean;
@@ -22,9 +23,10 @@ type Comment = {
 type TicketCommentsProps = {
   ticketId: number;
   comments: Comment[];
+  onCommentAdded?: (comment: Comment) => void;
 };
 
-export function TicketComments({ ticketId, comments: initialComments }: TicketCommentsProps) {
+export function TicketComments({ ticketId, comments: initialComments, onCommentAdded }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +54,7 @@ export function TicketComments({ ticketId, comments: initialComments }: TicketCo
       // Create optimistic comment for immediate UI update
       const optimisticComment = {
         id: Date.now(), // temporary ID
+        ticketId,
         content: newComment,
         createdAt: new Date(),
         isInternal,
@@ -81,6 +84,12 @@ export function TicketComments({ ticketId, comments: initialComments }: TicketCo
       if (result.error) {
         toast.error(result.error);
         return;
+      }
+      
+      // Use the server-returned comment data if available
+      if (result.comment && onCommentAdded) {
+        // Call the parent callback with the new comment
+        onCommentAdded(result.comment);
       }
       
       toast.success("Comment added successfully");

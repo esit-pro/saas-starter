@@ -17,7 +17,6 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
-import { SplitView } from '../../components/split-view';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
 import { Input } from '@/components/ui/input';
@@ -77,7 +76,8 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
         phone,
         address,
         notes,
-        isActive
+        isActive,
+        deletedAt: null
       });
       
       // Reset form

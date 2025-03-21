@@ -31,6 +31,7 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
   [ActivityType.CLIENT_CREATED]: Building,
   [ActivityType.CLIENT_UPDATED]: Building,
+  [ActivityType.CLIENT_DELETED]: Building,
   [ActivityType.TICKET_CREATED]: Ticket,
   [ActivityType.TICKET_UPDATED]: Ticket,
   [ActivityType.TICKET_CLOSED]: CheckCircle,
@@ -78,6 +79,8 @@ function formatAction(action: ActivityType): string {
       return 'You created a new client';
     case ActivityType.CLIENT_UPDATED:
       return 'You updated a client';
+    case ActivityType.CLIENT_DELETED:
+      return 'You deleted a client';
     case ActivityType.TICKET_CREATED:
       return 'You created a new ticket';
     case ActivityType.TICKET_UPDATED:

@@ -11,6 +11,7 @@ import { addExpense } from '@/app/(dashboard)/dashboard/tickets/actions';
 
 type ExpenseFormProps = {
   ticketId: number;
+  clientId?: number; // Optional clientId prop to pass to the API
   onAddExpense: (expense: {
     ticketId: number;
     description: string;
@@ -21,7 +22,7 @@ type ExpenseFormProps = {
   }) => void;
 };
 
-export function ExpenseForm({ ticketId, onAddExpense }: ExpenseFormProps) {
+export function ExpenseForm({ ticketId, clientId, onAddExpense }: ExpenseFormProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -59,7 +60,7 @@ export function ExpenseForm({ ticketId, onAddExpense }: ExpenseFormProps) {
       // Create form data
       const formData = new FormData();
       formData.append('ticketId', ticketId.toString());
-      formData.append('clientId', '1'); // This will be overridden by client ID derived from ticket
+      formData.append('clientId', clientId ? clientId.toString() : '1'); // Use provided clientId or default
       formData.append('description', description);
       formData.append('amount', amountNumber.toString());
       formData.append('category', category);
@@ -73,7 +74,7 @@ export function ExpenseForm({ ticketId, onAddExpense }: ExpenseFormProps) {
       const result = await addExpense(
         {
           ticketId,
-          clientId: 1, // This will be overridden
+          clientId: clientId || 1, // Use provided clientId or default
           description,
           amount: amountNumber,
           category,

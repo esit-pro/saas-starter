@@ -64,7 +64,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { CreateTicketForm } from '../../components/create-ticket-form';
-import { TicketComments } from '../../components/ticket-comments';
+import { TicketComments, Comment } from '../../components/ticket-comments';
 import { TimeEntryForm } from '../../components/time-entry-form';
 import { ExpenseForm } from '../../components/expense-form';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,20 +88,6 @@ type ServiceTicket = {
 type Client = {
   id: number;
   name: string;
-};
-
-// Comment type
-type Comment = {
-  id: number;
-  ticketId: number;
-  content: string;
-  createdAt: Date;
-  isInternal: boolean;
-  user: {
-    id: number;
-    name: string | null;
-    email: string;
-  };
 };
 
 // Demo data
@@ -287,27 +273,33 @@ const priorityIcons: Record<string, React.ReactNode> = {
 // Type definitions for time entries and expenses
 type TimeEntry = {
   id: number;
-  ticketId: number;
+  ticketId: number | null;
   clientId: number;
   description: string;
   startTime: Date;
   duration: number; // in minutes
   billable: boolean;
+  deletedAt?: Date | null;
   user: {
     id: number;
-    name: string;
-  };
+    name: string | null;
+    email?: string;
+  } | null;
 };
 
 type Expense = {
   id: number;
-  ticketId: number;
+  ticketId: number | null;
+  clientId: number;
   description: string;
-  amount: number;
+  amount: string | number;  // Allow both string and number
   date: Date;
-  category: string;
+  category: string | null;  // Allow null
   billable: boolean;
-  receiptUrl?: string;
+  receiptUrl?: string | null;
+  deletedAt?: Date | null;
+  userId?: number;  // Make this optional to match demo data
+  billed?: boolean; // Add this to match API response
 };
 
 // Demo time entries
@@ -345,6 +337,7 @@ const demoExpenses: Expense[] = [
   {
     id: 1,
     ticketId: 1,
+    clientId: 1,  // Add clientId
     description: "Emergency server parts",
     amount: 156.99,
     date: new Date(Date.now() - 3 * 60 * 60 * 1000),
@@ -516,7 +509,8 @@ function TicketDetailPane({
     : `${minutes}m`;
 
   // Calculate total expenses
-  const totalExpenses = expenses.reduce((acc, expense) => acc + expense.amount, 0);
+  const totalExpenses = expenses.reduce((acc, expense) => 
+    acc + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount), 0);
   
   // Merge ticket data with edited data
   const displayData = {
@@ -789,7 +783,11 @@ function TicketDetailPane({
                 <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Comments</h3>
                 <TicketComments
                   ticketId={ticket.id}
-                  comments={comments}
+                  comments={comments.filter(c => c.ticketId === ticket.id)}
+                  onCommentAdded={(comment) => {
+                    // Handle comment added at the detail pane level if needed
+                    console.log('Comment added:', comment);
+                  }}
                 />
               </div>
             </div>
@@ -840,7 +838,7 @@ function TicketDetailPane({
                             </div>
                             <div className="flex items-center justify-between mt-1">
                               <div className="text-sm text-gray-500 dark:text-muted-foreground">
-                                {entry.user.name} • {formatDistanceToNow(entry.startTime, { addSuffix: true })}
+                                {entry.user?.name || 'Unknown'} • {formatDistanceToNow(entry.startTime, { addSuffix: true })}
                               </div>
                               <div>
                                 {entry.billable ? (
@@ -871,6 +869,7 @@ function TicketDetailPane({
                 <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Add Expense</h3>
                 <ExpenseForm 
                   ticketId={ticket.id}
+                  clientId={ticket.clientId}
                   onAddExpense={onAddExpense}
                 />
               </div>
@@ -896,7 +895,9 @@ function TicketDetailPane({
                               {expense.description}
                             </div>
                             <span className="font-medium text-gray-900 dark:text-foreground">
-                              ${expense.amount.toFixed(2)}
+                              ${typeof expense.amount === 'number' 
+                                ? expense.amount.toFixed(2) 
+                                : parseFloat(String(expense.amount)).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-1">
@@ -1036,6 +1037,7 @@ export default function TicketsPage() {
             
             // Add a status change comment
             handleAddComment({
+              ticketId: row.original.id,
               content: `Status changed to completed`,
               isInternal: true
             });
@@ -1130,25 +1132,23 @@ export default function TicketsPage() {
     setActiveTickets([newTicket, ...activeTickets]);
   };
 
-  // Handler for adding a comment
-  const handleAddComment = (comment: { content: string; isInternal: boolean }) => {
-    if (!selectedTicket) return;
-
-    // In a real app, you'd call an API to add the comment
+  // Handler for adding a comment (now a callback from TicketComments)
+  const handleAddComment = (commentData: Partial<Comment> & { content: string }) => {
+    // Create a proper Comment object with all required fields
     const newComment: Comment = {
-      id: comments.length + 1,
-      ticketId: selectedTicket.id, // Add ticketId from the selected ticket
-      content: comment.content,
+      id: Date.now(), // Temporary ID until synced with server
+      ticketId: selectedTicket?.id || commentData.ticketId || 0,
+      content: commentData.content,
       createdAt: new Date(),
-      isInternal: comment.isInternal,
+      isInternal: commentData.isInternal || false,
       user: {
-        id: 1, // Current user ID
-        name: 'Jane Smith', // Current user name
-        email: 'jane@example.com', // Current user email
-      },
+        id: 1, // Current user ID (should be replaced with actual user data)
+        name: 'Current User', // Placeholder (should be replaced with actual user data)
+        email: 'user@example.com' // Placeholder (should be replaced with actual user data)
+      }
     };
 
-    setComments([newComment, ...comments]);
+    setComments([...comments, newComment]);
   };
 
   // Handler for logging time
@@ -1160,10 +1160,29 @@ export default function TicketsPage() {
     duration: number;
     billable: boolean;
   }) => {
-    // In a real app, you'd call an API to log the time
-    console.log('Time entry logged:', timeEntry);
+    // This function is called by the TimeEntryForm component after a successful API call
+    // The API call is handled in the TimeEntryForm component itself
+    // Here we're just updating our local state with the new entry for immediate UI update
     
-    // Add a comment indicating time was logged
+    // Create a new entry for the local state
+    const newTimeEntry: TimeEntry = {
+      id: timeEntries.length + 1, // In real app, this would come from the server response
+      ticketId: timeEntry.ticketId,
+      clientId: timeEntry.clientId,
+      description: timeEntry.description,
+      startTime: timeEntry.startTime,
+      duration: timeEntry.duration,
+      billable: timeEntry.billable,
+      user: {
+        id: 1, // Current user ID - in real app from auth
+        name: 'Jane Smith', // Current user name - in real app from auth
+      }
+    };
+    
+    // Update the local state
+    setTimeEntries([newTimeEntry, ...timeEntries]);
+    
+    // Add a comment for time entry
     const hours = Math.floor(timeEntry.duration / 60);
     const minutes = timeEntry.duration % 60;
     const timeString = hours > 0 
@@ -1171,6 +1190,7 @@ export default function TicketsPage() {
       : `${minutes} minute${minutes !== 1 ? 's' : ''}`;
     
     handleAddComment({
+      ticketId: timeEntry.ticketId,
       content: `Logged ${timeString} of work: ${timeEntry.description} ${timeEntry.billable ? '(Billable)' : '(Non-billable)'}`,
       isInternal: true
     });
@@ -1210,18 +1230,32 @@ export default function TicketsPage() {
     billable: boolean;
     receiptUrl?: string;
   }) => {
-    // In a real app, you'd call an API to add an expense
+    // This function is called by the ExpenseForm component after a successful API call
+    // The API call is handled in the ExpenseForm component itself
+    // Here we're just updating our local state with the new expense for immediate UI update
+    
+    // Create a new expense for the local state
     const newExpense: Expense = {
-      id: expenses.length + 1,
-      ...expense,
-      date: new Date()
+      id: expenses.length + 1, // In real app, this would come from the server response
+      ticketId: expense.ticketId,
+      clientId: selectedTicket?.clientId || 1, // Use ticket's client ID or a fallback
+      description: expense.description,
+      amount: expense.amount,
+      date: new Date(),
+      category: expense.category,
+      billable: expense.billable,
+      receiptUrl: expense.receiptUrl
     };
     
+    // Update the local state
     setExpenses([newExpense, ...expenses]);
     
-    // Add a comment about the expense addition
+    // Add a comment for the expense
     handleAddComment({
-      content: `Added expense: ${expense.description} - $${expense.amount.toFixed(2)} (${expense.category}) ${expense.billable ? '(Billable)' : '(Non-billable)'}`,
+      ticketId: expense.ticketId,
+      content: `Added expense: ${expense.description} - $${typeof expense.amount === 'number' 
+        ? expense.amount.toFixed(2) 
+        : expense.amount} ${expense.billable ? '(Billable)' : '(Non-billable)'}`,
       isInternal: true
     });
   };
@@ -1435,11 +1469,7 @@ export default function TicketsPage() {
                   ]);
                   setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
                   
-                  // Add a status change comment
-                  handleAddComment({
-                    content: `Status changed to completed`,
-                    isInternal: true
-                  });
+                  // No need for manual comment - the updateTicket action will log the activity
                   
                   // Add a status change to history
                   const newStatusChange: StatusChange = {
@@ -1479,6 +1509,65 @@ export default function TicketsPage() {
     },
   ];
 
+
+  // Fetch ticket details, time entries, and expenses when a ticket is selected
+  useEffect(() => {
+    const fetchTicketDetails = async () => {
+      if (!selectedTicket) return;
+      
+      try {
+        // Fetch the full ticket details including time entries and expenses
+        const result = await getTicketById(selectedTicket.id);
+        
+        if (result.error) {
+          console.error('Error fetching ticket details:', result.error);
+          return;
+        }
+        
+        if (result.ticket) {
+          // Update time entries if available
+          if (result.timeEntries) {
+            setTimeEntries(prevEntries => {
+              // Merge with existing entries, prioritizing the new ones
+              const newEntryIds = new Set(result.timeEntries.map((entry: TimeEntry) => entry.id));
+              const filteredOldEntries = prevEntries.filter(entry => 
+                entry.ticketId !== selectedTicket.id || !newEntryIds.has(entry.id)
+              );
+              return [...result.timeEntries, ...filteredOldEntries];
+            });
+          }
+          
+          // Update expenses if available
+          if (result.expenses) {
+            setExpenses(prevExpenses => {
+              // Merge with existing expenses, prioritizing the new ones
+              const newExpenseIds = new Set(result.expenses.map((expense: Expense) => expense.id));
+              const filteredOldExpenses = prevExpenses.filter(expense => 
+                expense.ticketId !== selectedTicket.id || !newExpenseIds.has(expense.id)
+              );
+              return [...result.expenses, ...filteredOldExpenses];
+            });
+          }
+          
+          // Update comments if available
+          if (result.ticket.comments) {
+            setComments(prevComments => {
+              // Merge with existing comments, prioritizing the new ones
+              const newCommentIds = new Set(result.ticket.comments.map((comment: Comment) => comment.id));
+              const filteredOldComments = prevComments.filter(comment => 
+                comment.ticketId !== selectedTicket.id || !newCommentIds.has(comment.id)
+              );
+              return [...result.ticket.comments, ...filteredOldComments];
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch ticket details:', error);
+      }
+    };
+    
+    fetchTicketDetails();
+  }, [selectedTicket?.id, selectedTicket]);
 
   // Get the filtered data based on selected ticket
   const filteredComments = selectedTicket 

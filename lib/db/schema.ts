@@ -88,6 +88,7 @@ export const clients = pgTable('clients', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
 });
 
 export const serviceTickets = pgTable('service_tickets', {
@@ -112,6 +113,7 @@ export const serviceTickets = pgTable('service_tickets', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   closedAt: timestamp('closed_at'),
+  deletedAt: timestamp('deleted_at'),
   metadata: json('metadata'),
 });
 
@@ -148,6 +150,7 @@ export const timeEntries = pgTable('time_entries', {
   billableRate: decimal('billable_rate', { precision: 10, scale: 2 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
 });
 
 export const expenses = pgTable('expenses', {
@@ -170,6 +173,7 @@ export const expenses = pgTable('expenses', {
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
 });
 
 // Relations
@@ -341,6 +345,7 @@ export enum ActivityType {
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
   CLIENT_CREATED = 'CLIENT_CREATED',
   CLIENT_UPDATED = 'CLIENT_UPDATED',
+  CLIENT_DELETED = 'CLIENT_DELETED',
   TICKET_CREATED = 'TICKET_CREATED',
   TICKET_UPDATED = 'TICKET_UPDATED',
   TICKET_CLOSED = 'TICKET_CLOSED',

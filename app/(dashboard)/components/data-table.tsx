@@ -295,15 +295,37 @@ export function DataTable<TData extends { id: number }, TValue>({
                         );
                       };
                       
-                      // This should actually render the row data, not "No results found"
+                      // Use motion.tr with layout and exit animation for smooth transitions
                       return (
-                        <tr key={row.id}>
+                        <motion.tr
+                          key={rowData.id}
+                          layout
+                          initial={{ opacity: 1 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ 
+                            opacity: 0,
+                            height: 0,
+                            overflow: 'hidden'
+                          }}
+                          transition={{ duration: 0.4 }}
+                          style={{
+                            x: swipeX,
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                          whileTap={{ cursor: 'grabbing' }}
+                          drag="x"
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.1}
+                          onDragEnd={(e, info) => handleSwipeEnd(rowData.id, info)}
+                          onDrag={(e, info) => handleSwipeUpdate(rowData.id, info)}
+                        >
                           {row.getVisibleCells().map(cell => (
                             <td key={cell.id} className="p-4">
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           ))}
-                        </tr>
+                        </motion.tr>
                       );
                     })}
                   </AnimatePresence>

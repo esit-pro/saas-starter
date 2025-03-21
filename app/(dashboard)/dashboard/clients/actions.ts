@@ -190,7 +190,7 @@ export const updateClient = validatedActionWithUser(
   }
 );
 
-// Delete a client
+// Delete a client (soft delete)
 const deleteClientSchema = z.object({
   id: z.preprocess((val) => Number(val), z.number()),
 });
@@ -207,22 +207,30 @@ export const deleteClient = validatedActionWithUser(
       // Verify client belongs to this team
       const teamId = userTeamInfo.teamId;
       const existingClient = await db.query.clients.findFirst({
-        where: (client, { and, eq: whereEq }) => 
-          and(whereEq(client.id, data.id), whereEq(client.teamId, teamId))
+        where: (client, { and, eq: whereEq, isNull: whereIsNull }) => 
+          and(
+            whereEq(client.id, data.id), 
+            whereEq(client.teamId, teamId),
+            whereIsNull(client.deletedAt)
+          )
       });
 
       if (!existingClient) {
         return { error: 'Client not found or not authorized to delete' };
       }
 
-      // In a real application, you would check for dependencies
-      // like tickets, time entries, or expenses before deleting
-      
+      // Soft delete by setting the deletedAt timestamp
+      // This preserves all relationships while hiding the client from active views
       const [deletedClient] = await db
-        .delete(clients)
+        .update(clients)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
         .where(eq(clients.id, data.id))
         .returning();
 
+      // Add a CLIENT_DELETED activity type to ActivityType enum in schema.ts when convenient
       await logClientActivity(
         teamId,
         user.id,
@@ -286,7 +294,8 @@ export async function getClientsForTeam(_formData?: FormData) {
     console.log('Fetching clients for teamId:', teamId);
     
     const clientList = await db.query.clients.findMany({
-      where: (client, { eq: whereEq }) => whereEq(client.teamId, teamId as number),
+      where: (client, { and, eq: whereEq, isNull: whereIsNull }) => 
+        and(whereEq(client.teamId, teamId as number), whereIsNull(client.deletedAt)),
       orderBy: (client, { desc }) => [desc(client.createdAt)]
     });
     
@@ -317,8 +326,12 @@ export async function getClientById(id: number, _formData?: FormData) {
     console.log(`Fetching client with ID: ${id} for team: ${teamId}`);
     
     const client = await db.query.clients.findFirst({
-      where: (client, { and, eq: whereEq }) => 
-        and(whereEq(client.id, id), whereEq(client.teamId, teamId as number))
+      where: (client, { and, eq: whereEq, isNull: whereIsNull }) => 
+        and(
+          whereEq(client.id, id), 
+          whereEq(client.teamId, teamId as number),
+          whereIsNull(client.deletedAt)
+        )
     });
 
     if (!client) {

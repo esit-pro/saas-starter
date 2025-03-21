@@ -166,7 +166,10 @@ export async function getClients(teamId: number) {
   return await db
     .select()
     .from(clients)
-    .where(eq(clients.teamId, teamId))
+    .where(and(
+      eq(clients.teamId, teamId),
+      isNull(clients.deletedAt)
+    ))
     .orderBy(clients.name);
 }
 
@@ -174,7 +177,10 @@ export async function getClient(clientId: number) {
   return await db
     .select()
     .from(clients)
-    .where(eq(clients.id, clientId))
+    .where(and(
+      eq(clients.id, clientId),
+      isNull(clients.deletedAt)
+    ))
     .limit(1)
     .then(result => result[0] || null);
 }
@@ -216,7 +222,10 @@ export async function getServiceTickets(teamId: number, filters?: {
   status?: string;
   assignedTo?: number;
 }) {
-  let conditions = [eq(serviceTickets.teamId, teamId)];
+  let conditions = [
+    eq(serviceTickets.teamId, teamId),
+    isNull(serviceTickets.deletedAt)
+  ];
   
   if (filters?.clientId) {
     conditions.push(eq(serviceTickets.clientId, filters.clientId));
@@ -245,7 +254,8 @@ export async function getServiceTickets(teamId: number, filters?: {
 
 export async function getServiceTicket(ticketId: number) {
   return await db.query.serviceTickets.findFirst({
-    where: eq(serviceTickets.id, ticketId),
+    where: (tickets, { and, eq: whereEq, isNull: whereIsNull }) => 
+      and(whereEq(tickets.id, ticketId), whereIsNull(tickets.deletedAt)),
     with: {
       client: true,
       assignedUser: {
@@ -308,9 +318,12 @@ export async function updateServiceTicket(
 }
 
 export async function deleteServiceTicket(ticketId: number) {
-  // In production, consider using soft delete by setting a deletedAt timestamp
   return await db
-    .delete(serviceTickets)
+    .update(serviceTickets)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date()
+    })
     .where(eq(serviceTickets.id, ticketId))
     .returning();
 }
@@ -391,7 +404,7 @@ export async function getTimeEntries(filters: {
   billable?: boolean;
   billed?: boolean;
 }) {
-  let conditions = [];
+  let conditions = [isNull(timeEntries.deletedAt)];
   
   // Apply filters
   if (filters.teamId) {
@@ -481,7 +494,7 @@ export async function getExpenses(filters: {
   billed?: boolean;
   category?: string;
 }) {
-  let conditions = [];
+  let conditions = [isNull(expenses.deletedAt)];
   
   // Apply filters
   if (filters.teamId) {
