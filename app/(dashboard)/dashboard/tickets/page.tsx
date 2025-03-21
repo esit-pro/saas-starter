@@ -37,6 +37,9 @@ import { SplitView } from '../../components/split-view';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 import { DataTable } from '../../components/data-table';
 import { TicketWidgetsCard } from '../../components/ticket-widgets-card';
 import { 
@@ -76,6 +79,7 @@ type ServiceTicket = {
   status: string; // Allow any string from the database
   priority: string; // Allow any string from the database
   category: string;
+  description?: string | null;
   createdAt: Date;
   dueDate: Date | null;
 };
@@ -412,13 +416,18 @@ function TicketDetailPane({
   expenses, 
   statusHistory,
   onLogTime,
-  onAddExpense
+  onAddExpense,
+  onUpdateTicket,
+  clients,
+  teamMembers
 }: { 
   ticket: ServiceTicket | null;
   comments: Comment[];
   timeEntries: TimeEntry[];
   expenses: Expense[];
   statusHistory: StatusChange[];
+  clients: Client[];
+  teamMembers?: { id: number; name: string; email: string }[];
   onLogTime: (timeEntry: any) => void;
   onAddExpense: (expense: { 
     ticketId: number;
@@ -428,8 +437,19 @@ function TicketDetailPane({
     billable: boolean;
     receiptUrl?: string;
   }) => void;
+  onUpdateTicket: (id: number, data: Partial<ServiceTicket>) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<'activity' | 'time' | 'expenses'>('activity');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<Partial<ServiceTicket>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  
+  useEffect(() => {
+    // Reset state when ticket changes
+    setIsEditing(false);
+    setEditedData({});
+    setIsSaving(false);
+  }, [ticket?.id]);
 
   if (!ticket) {
     return (
@@ -442,6 +462,50 @@ function TicketDetailPane({
       </div>
     );
   }
+  
+  const handleChange = (field: keyof ServiceTicket, value: any) => {
+    setEditedData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  const handleSave = async () => {
+    if (Object.keys(editedData).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await onUpdateTicket(ticket.id, editedData);
+      setIsEditing(false);
+      setEditedData({});
+      toast.success('Ticket updated successfully');
+      
+      // Add a status change to history if status was modified
+      if (editedData.status && editedData.status !== ticket.status) {
+        const newStatusChange: StatusChange = {
+          id: statusHistory.length + 1,
+          ticketId: ticket.id,
+          status: editedData.status,
+          timestamp: new Date(),
+          user: {
+            id: 1, // Current user ID - in real app get from auth
+            name: 'Jane Smith', // Current user name - in real app get from auth
+          }
+        };
+        
+        // Update status history locally
+        statusHistory.unshift(newStatusChange);
+      }
+    } catch (error) {
+      console.error('Error saving ticket:', error);
+      toast.error('Failed to update ticket');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Calculate total time spent
   const totalMinutes = timeEntries.reduce((acc, entry) => acc + entry.duration, 0);
@@ -453,47 +517,152 @@ function TicketDetailPane({
 
   // Calculate total expenses
   const totalExpenses = expenses.reduce((acc, expense) => acc + expense.amount, 0);
+  
+  // Merge ticket data with edited data
+  const displayData = {
+    ...ticket,
+    ...editedData
+  };
 
   return (
     <div className="h-full overflow-auto">
       <div className="p-6 flex flex-col gap-6">
-        {/* Ticket header */}
-        <div className="flex items-center">
-          <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
-            <Ticket className="h-8 w-8" />
+        {/* Ticket header with edit button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
+              <Ticket className="h-8 w-8" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between max-w-md">
+                {isEditing ? (
+                  <Input
+                    value={displayData.title || ''}
+                    onChange={(e) => handleChange('title', e.target.value)}
+                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                  />
+                ) : (
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.title}</h2>
+                )}
+                
+                {isEditing ? (
+                  <select
+                    value={displayData.status}
+                    onChange={(e) => handleChange('status', e.target.value)}
+                    className="ml-4 px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border border-blue-300 dark:border-blue-700"
+                  >
+                    <option value="open">Open</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="on-hold">On Hold</option>
+                    <option value="completed">Completed</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                ) : (
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[displayData.status]}`}>
+                    {displayData.status}
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center flex-wrap gap-4 mt-1">
+                <div className="flex items-center">
+                  <span>Ticket #{ticket.id}</span>
+                </div>
+                <div className="flex items-center">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <span>Client:</span>
+                      <select
+                        value={displayData.clientId}
+                        onChange={(e) => handleChange('clientId', Number(e.target.value))}
+                        className="bg-white dark:bg-zinc-800 rounded border border-blue-300 dark:border-blue-700 text-sm"
+                      >
+                        {clients.map(client => (
+                          <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <span>Client: {displayData.client}</span>
+                  )}
+                </div>
+                <div className="flex items-center">
+                  <span>Created {formatDistanceToNow(ticket.createdAt, { addSuffix: true })}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{ticket.title}</h2>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[ticket.status]}`}>
-                {ticket.status}
-              </span>
-            </div>
-            <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center flex-wrap gap-4 mt-1">
-              <div className="flex items-center">
-                <span>Ticket #{ticket.id}</span>
+          <div>
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedData({});
+                  }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
               </div>
-              <div className="flex items-center">
-                <span>Client: {ticket.client}</span>
-              </div>
-              <div className="flex items-center">
-                <span>Created {formatDistanceToNow(ticket.createdAt, { addSuffix: true })}</span>
-              </div>
-            </div>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsEditing(true)}
+                className="flex items-center"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Ticket details cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="border dark:border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Priority</h3>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 ${isEditing ? 'border-2 border-blue-200 dark:border-blue-900/40 rounded-lg p-2' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+              Priority
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+            </h3>
             <div className="flex items-center">
-              {priorityIcons[ticket.priority]}
-              <span className="ml-2 font-medium capitalize text-gray-900 dark:text-foreground">{ticket.priority}</span>
+              {isEditing ? (
+                <select
+                  value={displayData.priority}
+                  onChange={(e) => handleChange('priority', e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-800 rounded border border-blue-300 dark:border-blue-700 p-2"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              ) : (
+                <>
+                  {priorityIcons[displayData.priority]}
+                  <span className="ml-2 font-medium capitalize text-gray-900 dark:text-foreground">{displayData.priority}</span>
+                </>
+              )}
             </div>
           </div>
           
-          <div className="border dark:border-border rounded-lg p-4">
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Time Tracked</h3>
             <div className="flex items-center">
               <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
@@ -503,16 +672,55 @@ function TicketDetailPane({
             </div>
           </div>
           
-          <div className="border dark:border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Expenses</h3>
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">
+              {isEditing ? (
+                <div className="flex items-center justify-between">
+                  <span>Category</span>
+                  {isEditing && <span className="text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+                </div>
+              ) : (
+                "Category"
+              )}
+            </h3>
             <div className="flex items-center">
-              <DollarSignIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
-              <span className="font-medium text-gray-900 dark:text-foreground">
-                {expenses.length > 0 ? `$${totalExpenses.toFixed(2)}` : "No expenses"}
-              </span>
+              {isEditing ? (
+                <Input
+                  value={displayData.category || ''}
+                  onChange={(e) => handleChange('category', e.target.value)}
+                  placeholder="e.g., Hardware, Software, Network"
+                  className="border-blue-300 dark:border-blue-700"
+                />
+              ) : (
+                <span className="font-medium text-gray-900 dark:text-foreground">
+                  {displayData.category || "Uncategorized"}
+                </span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Description Section */}
+        {(displayData.description || isEditing) && (
+          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+              Description
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+            </h3>
+            {isEditing ? (
+              <Textarea
+                value={displayData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Enter detailed description of the issue"
+                className="min-h-[120px] border-blue-300 dark:border-blue-700"
+              />
+            ) : (
+              <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
+                {displayData.description || 'No description provided.'}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab navigation */}
         <div className="border-b dark:border-border">
@@ -1017,6 +1225,104 @@ export default function TicketsPage() {
       isInternal: true
     });
   };
+  
+  // Handler for updating a ticket
+  const handleUpdateTicket = async (id: number, data: Partial<ServiceTicket>) => {
+    try {
+      // Combine basic data with required fields
+      const ticket = tickets.find(t => t.id === id);
+      if (!ticket) {
+        toast.error('Ticket not found');
+        return Promise.reject('Ticket not found');
+      }
+      
+      // Create the full update payload
+      const updateData = {
+        id,
+        title: data.title || ticket.title,
+        description: data.description !== undefined ? data.description : ticket.description,
+        clientId: data.clientId || ticket.clientId,
+        status: data.status || ticket.status as 'open' | 'in-progress' | 'on-hold' | 'completed' | 'closed',
+        priority: data.priority || ticket.priority as 'low' | 'medium' | 'high' | 'critical',
+        category: data.category !== undefined ? data.category : ticket.category,
+        assignedTo: data.assignedTo !== undefined ? data.assignedTo : ticket.assignedTo,
+        dueDate: data.dueDate !== undefined ? data.dueDate : ticket.dueDate
+      };
+      
+      // Create form data for the API call
+      const formData = new FormData();
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // In a real app, we'd call the API
+      console.log('Updating ticket with data:', updateData);
+      const result = await updateTicket(updateData, formData);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return Promise.reject(result.error);
+      }
+      
+      if (result.success) {
+        // Update the ticket in the local state
+        const updatedTickets = tickets.map(t => 
+          t.id === id 
+            ? { 
+                ...t, 
+                ...data,
+                // Handle special case for client name
+                client: data.clientId 
+                  ? clients.find(c => c.id === data.clientId)?.name || t.client 
+                  : t.client
+              } 
+            : t
+        );
+        
+        // Update all state
+        setTickets(updatedTickets);
+        
+        // Update filtered lists
+        const updatedTicket = updatedTickets.find(t => t.id === id);
+        if (updatedTicket) {
+          if (updatedTicket.status === 'completed' || updatedTicket.status === 'closed') {
+            // Move to completed list if needed
+            if (!completedTickets.some(t => t.id === id)) {
+              setCompletedTickets([updatedTicket, ...completedTickets.filter(t => t.id !== id)]);
+              setActiveTickets(activeTickets.filter(t => t.id !== id));
+            } else {
+              // Update in completed list
+              setCompletedTickets(completedTickets.map(t => t.id === id ? updatedTicket : t));
+            }
+          } else {
+            // Move to active list if needed
+            if (!activeTickets.some(t => t.id === id)) {
+              setActiveTickets([updatedTicket, ...activeTickets.filter(t => t.id !== id)]);
+              setCompletedTickets(completedTickets.filter(t => t.id !== id));
+            } else {
+              // Update in active list
+              setActiveTickets(activeTickets.map(t => t.id === id ? updatedTicket : t));
+            }
+          }
+        }
+        
+        // Update selected ticket if it's the one we're viewing
+        if (selectedTicket?.id === id) {
+          setSelectedTicket(updatedTicket || null);
+        }
+        
+        return Promise.resolve();
+      }
+      
+      return Promise.reject('Unknown error updating ticket');
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast.error('Failed to update ticket');
+      return Promise.reject(error);
+    }
+  };
 
   const columns = [
     {
@@ -1382,6 +1688,8 @@ export default function TicketsPage() {
                 statusHistory={statusHistory.filter(s => s.ticketId === selectedTicket.id)}
                 onLogTime={handleLogTime}
                 onAddExpense={handleAddExpense}
+                onUpdateTicket={handleUpdateTicket}
+                clients={clients}
               />
             </div>
           </motion.div>
