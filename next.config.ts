@@ -2,7 +2,16 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   experimental: {
-    ppr: true
+    ppr: true,
+    turbo: {
+      loaders: {
+        // Add any specific loaders you need to configure here
+        // Example: '.svg': ['@svgr/webpack']
+      },
+      rules: {
+        // Add any specific rules you need here
+      }
+    }
   },
   // Optimize chunk loading to avoid ChunkLoadError
   webpack: (config, { isServer }) => {
