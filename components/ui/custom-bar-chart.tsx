@@ -92,7 +92,7 @@ const CustomBarChart: React.FC<BarChartProps> = ({
             tickFormatter={valueFormatter}
             tickLine={false}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} cursor={false} />
           <Legend />
           {categories.map((category, idx) => (
             <Bar

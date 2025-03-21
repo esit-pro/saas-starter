@@ -17,7 +17,7 @@ export default async function DashboardLayout({
   return (
     <div className="fixed inset-0 bg-background text-foreground flex">
       <ModernSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden" suppressHydrationWarning>
         <SiteHeader user={user} />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:rounded-tl-lg bg-background lg:mt-1 lg:ml-1">
           {children}

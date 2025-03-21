@@ -156,10 +156,64 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Global table styles for horizontal scrolling instead of line breaks */
+  table {
+    @apply min-w-full table-auto;
+  }
+  
+  .table-container {
+    @apply w-full overflow-x-auto;
+  }
+  
+  table td, table th {
+    @apply whitespace-nowrap;
+  }
+  
+  /* Column sizing for better space usage */
+  .table-auto th:not(.w-\[60px\]) {
+    @apply w-auto;
+  }
+  
+  /* Prevent avatars and icons from being squished */
+  .h-9.w-9 {
+    @apply flex-shrink-0 min-w-9 min-h-9;
+  }
+  
+  /* Add spacing between dropdown menu items */
+  /* Target Command component items */
+  [cmdk-group] {
+    gap: 0.5em;
+  }
+  
+  /* Target Command menu items directly */
+  [cmdk-item] + [cmdk-item] {
+    margin-top: 0.5em;
+  }
+  
+  /* Target Radix dropdown menu content */
+  [data-radix-dropdown-menu-content],
+  [data-radix-popper-content] {
+    --dropdown-item-spacing: 0.5em;
+  }
+  
+  /* Apply to dropdown and combobox items */
+  [role="menu"] > *,
+  [role="listbox"] > *,
+  [id$="-list"] > * {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+  
+  /* Target dropdown items */
+  [data-radix-dropdown-menu-content] [role="menuitem"] + [role="menuitem"],
+  [data-radix-popper-content] [role="option"] + [role="option"] {
+    margin-top: 0.5em;
   }
 }
 
@@ -222,7 +276,7 @@
   --muted-foreground: hsl(240 5% 64.9%);
   --accent: hsl(240 3.7% 15.9%);
   --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
+  --destructive: hsl(0 80.8% 30.6%);
   --destructive-foreground: hsl(0 0% 98%);
   --border: hsl(240 3.7% 15.9%);
   --input: hsl(240 3.7% 15.9%);
@@ -288,35 +342,3 @@
 /*
   ---break---
 */
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  
-  /* Global table styles for horizontal scrolling instead of line breaks */
-  table {
-    @apply min-w-full table-auto;
-  }
-  
-  .table-container {
-    @apply w-full overflow-x-auto;
-  }
-  
-  table td, table th {
-    @apply whitespace-nowrap;
-  }
-  
-  /* Column sizing for better space usage */
-  .table-auto th:not(.w-\[60px\]) {
-    @apply w-auto;
-  }
-  
-  /* Prevent avatars and icons from being squished */
-  .h-9.w-9 {
-    @apply flex-shrink-0 min-w-9 min-h-9;
-  }
-}

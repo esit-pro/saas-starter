@@ -112,7 +112,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <DropdownMenuSeparator />
               <form action={handleSignOut} className="w-full">
                 <button type="submit" className="w-full">
-                  <DropdownMenuItem className="w-full cursor-pointer">
+                  <DropdownMenuItem className="w-full cursor-pointer bg-destructive/90 text-destructive-foreground font-medium hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sign out</span>
                   </DropdownMenuItem>

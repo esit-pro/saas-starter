@@ -96,7 +96,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={handleLogout}
-                  className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                  className="bg-destructive/90 text-destructive-foreground font-medium hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
