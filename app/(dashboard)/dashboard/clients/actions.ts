@@ -318,7 +318,7 @@ export async function getClientById(id: number, _formData?: FormData) {
     
     const client = await db.query.clients.findFirst({
       where: (client, { and, eq: whereEq }) => 
-        and(whereEq(client.id, id), whereEq(client.teamId, teamId))
+        and(whereEq(client.id, id), whereEq(client.teamId, teamId as number))
     });
 
     if (!client) {

@@ -114,3 +114,21 @@
   - Define clear interfaces for component props
   - Use generic types for reusable components
   - Ensure form components properly handle loading and disabled states
+
+## Server vs Client Components
+- **Server Components**:
+  - Dynamic route pages should be server components (without 'use client')
+  - Server components receive `params` prop automatically (e.g., `params: { id: string }`)
+  - Use server components to fetch initial data using server actions
+  - Pass data to client components for interactive functionality
+
+- **Client Components**:
+  - Mark with 'use client' directive at the top of the file
+  - Create dedicated client component files for interactive UI elements
+  - Receive data as props from parent server components
+  - Handle form submissions, user input, and client-side interactions
+  
+- **Hybrid Pattern**:
+  - For complex pages with dynamic routes, use server component for the route page
+  - Create client components for interactive sections (like forms)
+  - Example: `/clients/[id]/edit/page.tsx` (server) uses `client-edit-form.tsx` (client)
