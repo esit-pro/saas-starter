@@ -18,6 +18,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
+import { RevenueChart } from './components/revenue-chart';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
@@ -106,9 +107,21 @@ export default async function Dashboard() {
     billedExpenses: 2800 
   };
 
-  // Chart data
-  const monthlyData = getRandomData(12, 15000);
-  const monthlyLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Chart data for revenue
+  const revenueChartData = [
+    { month: 'Jan', Revenue: 8450, Expenses: 3200 },
+    { month: 'Feb', Revenue: 9271, Expenses: 3500 },
+    { month: 'Mar', Revenue: 12090, Expenses: 4100 },
+    { month: 'Apr', Revenue: 10893, Expenses: 3800 },
+    { month: 'May', Revenue: 9050, Expenses: 3300 },
+    { month: 'Jun', Revenue: 11500, Expenses: 4000 },
+    { month: 'Jul', Revenue: 15000, Expenses: 4900 },
+    { month: 'Aug', Revenue: 14200, Expenses: 4600 },
+    { month: 'Sep', Revenue: 11600, Expenses: 4100 },
+    { month: 'Oct', Revenue: 13200, Expenses: 4500 },
+    { month: 'Nov', Revenue: 12500, Expenses: 4200 },
+    { month: 'Dec', Revenue: 17500, Expenses: 5900 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -231,26 +244,8 @@ export default async function Dashboard() {
                     <h3 className="text-sm font-medium text-foreground">Monthly Revenue</h3>
                     <span className="text-sm text-muted-foreground">This Year</span>
                   </div>
-                  <div className="relative flex-grow mb-4 min-h-[180px] lg:min-h-[250px]">
-                    {/* Bar chart rendered here - using a mock for now */}
-                    <div className="flex items-end justify-between h-full px-2">
-                      {monthlyData.map((value, index) => (
-                        <div 
-                          key={index} 
-                          className="w-6 lg:w-4 bg-primary rounded-t relative group"
-                          style={{ height: `${(value / 15000) * 100}%` }}
-                        >
-                          <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground border border-border text-xs rounded py-1 px-2 whitespace-nowrap shadow-md">
-                            {formatCurrency(value)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                      {monthlyLabels.map((label, index) => (
-                        <div key={index} className="text-center truncate w-8 lg:w-6">{label}</div>
-                      ))}
-                    </div>
+                  <div className="flex-grow">
+                    <RevenueChart data={revenueChartData} />
                   </div>
                 </div>
               </div>

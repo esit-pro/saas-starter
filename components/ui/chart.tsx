@@ -2,11 +2,110 @@
 
 import * as React from 'react';
 import * as RechartsPrimitive from 'recharts';
+import {
+  Bar,
+  CartesianGrid,
+  Label,
+  BarChart as RechartsBarChart,
+  Legend as RechartsLegend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
+import { AxisDomain, AxisInterval } from "recharts/types/util/types"
+import { ContentType, TooltipProps } from 'recharts/types/component/Tooltip';
 
 import { cn } from '@/lib/utils';
 
+// Replace @remixicon/react with lucide-react icons
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
+
+//#region Shape
+
+function deepEqual<T>(obj1: T, obj2: T): boolean {
+  if (obj1 === obj2) return true
+
+  if (
+    typeof obj1 !== "object" ||
+    typeof obj2 !== "object" ||
+    obj1 === null ||
+    obj2 === null
+  ) {
+    return false
+  }
+
+  const keys1 = Object.keys(obj1) as Array<keyof T>
+  const keys2 = Object.keys(obj2) as Array<keyof T>
+
+  if (keys1.length !== keys2.length) return false
+
+  for (const key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false
+  }
+
+  return true
+}
+
+interface ShapeProps {
+  x: number
+  y: number
+  width: number
+  height: number
+  fillOpacity: number
+  fill: string
+  name: string
+  value: number
+  payload: any
+}
+
+const renderShape = (
+  props: ShapeProps,
+  activeBar: { dataKey: string; payload: any } | undefined,
+  activeLegend: string | undefined,
+  layout: string,
+) => {
+  const { fillOpacity, name, payload, value } = props
+  let { x, width, y, height } = props
+
+  if (layout === "horizontal" && height < 0) {
+    y += height
+    height = Math.abs(height) // height must be a positive number
+  } else if (layout === "vertical" && width < 0) {
+    x += width
+    width = Math.abs(width) // width must be a positive number
+  }
+
+  const isActive =
+    activeBar &&
+    activeLegend &&
+    activeBar.dataKey === name &&
+    deepEqual(activeBar.payload, payload)
+
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={props.fill}
+      radius={4}
+      className={cn(
+        isActive ? "stroke-2 stroke-current" : "",
+        activeLegend === name && !isActive ? "opacity-30" : "",
+        activeLegend !== undefined && activeLegend !== name && !isActive
+          ? "opacity-30"
+          : ""
+      )}
+      fillOpacity={activeLegend === name || activeLegend === undefined ? 1 : fillOpacity}
+    />
+  )
+}
+
+//#endregion
 
 export type ChartConfig = {
   [k in string]: {
@@ -352,6 +451,362 @@ function getPayloadConfigFromPayload(
   return configLabelKey in config
     ? config[configLabelKey]
     : config[key as keyof typeof config];
+}
+
+// New BarChart component
+export type BarChartProps = {
+  data: Record<string, any>[]
+  categories: string[]
+  index: string
+  colors?: string[]
+  valueFormatter?: (value: number) => string
+  startEndOnly?: boolean
+  intervalType?: "equidistant" | "preserveStart" | "preserveEnd" | "preserveStartEnd"
+  noDataText?: string
+  showAnimation?: boolean
+  animationDuration?: number
+  showXAxis?: boolean
+  showYAxis?: boolean
+  yAxisWidth?: number
+  showTooltip?: boolean
+  showLegend?: boolean
+  showGridLines?: boolean
+  showGradient?: boolean
+  autoMinValue?: boolean
+  minValue?: number
+  maxValue?: number
+  stack?: boolean
+  layout?: "horizontal" | "vertical"
+  onValueChange?: (value: any) => void
+  className?: string
+  customTooltip?: React.FC<any>
+}
+
+export const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
+  (
+    {
+      data = [],
+      categories,
+      index,
+      colors = ["blue", "purple", "indigo", "emerald", "rose", "gray"],
+      valueFormatter,
+      startEndOnly = false,
+      intervalType = "equidistant",
+      noDataText = "No data available",
+      showAnimation = false,
+      animationDuration = 900,
+      showXAxis = true,
+      showYAxis = true,
+      yAxisWidth = 40,
+      showTooltip = true,
+      showLegend = true,
+      showGridLines = true,
+      showGradient = false,
+      autoMinValue = false,
+      minValue,
+      maxValue,
+      stack = false,
+      layout = "vertical",
+      onValueChange,
+      className,
+      customTooltip,
+    },
+    ref
+  ) => {
+    const [legendHeight, setLegendHeight] = React.useState(60)
+    const [activeBar, setActiveBar] = React.useState<{ dataKey: string; payload: any } | undefined>(undefined)
+    const [activeLegend, setActiveLegend] = React.useState<string | undefined>(undefined)
+    
+    const windowResizeHandler = React.useCallback(() => {
+      const legendElement = document.getElementById("recharts-legend-wrapper")
+      if (legendElement) {
+        setLegendHeight(legendElement.getBoundingClientRect().height)
+      }
+    }, [])
+    
+    React.useEffect(() => {
+      if (showLegend) {
+        windowResizeHandler()
+        window.addEventListener("resize", windowResizeHandler)
+      }
+      
+      return () => {
+        window.removeEventListener("resize", windowResizeHandler)
+      }
+    }, [showLegend, windowResizeHandler])
+
+    const dataKeys = {
+      xAxisKey: layout === "vertical" ? index : "value",
+      yAxisKey: layout === "vertical" ? "value" : index,
+    }
+
+    const yAxisDomain = React.useMemo(() => {
+      if (minValue !== undefined && maxValue !== undefined) {
+        return [minValue, maxValue] as AxisDomain
+      }
+      if (minValue !== undefined) {
+        return [minValue, "auto"] as AxisDomain
+      }
+      if (maxValue !== undefined) {
+        return [0, maxValue] as AxisDomain
+      }
+      if (autoMinValue) {
+        return ["auto", "auto"] as AxisDomain
+      }
+      
+      return [0, "auto"] as AxisDomain
+    }, [autoMinValue, minValue, maxValue])
+
+    const colorMap: Record<string, string> = {
+      blue: "#3b82f6",
+      purple: "#a855f7",
+      indigo: "#6366f1",
+      emerald: "#10b981",
+      rose: "#f43f5e",
+      gray: "#6b7280",
+    }
+
+    const handleBarClick = (bar: any) => {
+      if (onValueChange) {
+        onValueChange({
+          eventType: "barClick",
+          categoryClicked: bar.dataKey,
+          itemData: bar.payload,
+        })
+      }
+    }
+
+    const handleLegendClick = (dataKey: string | undefined) => {
+      if (!dataKey) return;
+      
+      setActiveLegend(activeLegend === dataKey ? undefined : dataKey);
+      
+      if (onValueChange) {
+        onValueChange({
+          eventType: "legendClick",
+          categoryClicked: dataKey,
+        });
+      }
+    };
+
+    const tooltipFormatter = (value: number, _: string, props: any) => {
+      return [valueFormatter ? valueFormatter(value) : value, props.dataKey]
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "w-full h-80 flex flex-col",
+          className
+        )}
+      >
+        {data.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsBarChart
+              data={data}
+              layout={layout}
+              barGap={2}
+              barCategoryGap={8}
+              onMouseMove={(e) => {
+                if (e.activePayload) {
+                  setActiveBar({
+                    dataKey: e.activePayload[0].dataKey as string,
+                    payload: e.activePayload[0].payload,
+                  })
+                }
+              }}
+              onMouseLeave={() => setActiveBar(undefined)}
+              margin={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            >
+              {showGridLines ? (
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="stroke-slate-200 dark:stroke-slate-800"
+                  horizontal={true}
+                  vertical={false}
+                />
+              ) : null}
+              
+              {showXAxis ? (
+                <XAxis
+                  dataKey={index}
+                  axisLine={false}
+                  tick={{ transform: "translate(0, 6)" }}
+                  ticks={
+                    startEndOnly
+                      ? [data[0][index], data[data.length - 1][index]]
+                      : undefined
+                  }
+                  interval={intervalType === "equidistant" ? 0 : 0}
+                  minTickGap={5}
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  tickLine={false}
+                  padding={{ left: 10, right: 10 }}
+                  angle={0}
+                  height={20}
+                />
+              ) : null}
+              
+              {showYAxis ? (
+                <YAxis
+                  dataKey="value"
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  tick={{ transform: "translate(-3, 0)" }}
+                  width={yAxisWidth}
+                  domain={yAxisDomain}
+                  tickFormatter={valueFormatter}
+                />
+              ) : null}
+              
+              {showTooltip ? (
+                <Tooltip
+                  content={(props) => customTooltip ? React.createElement(customTooltip, props) : null}
+                  formatter={tooltipFormatter}
+                  cursor={{ opacity: 0.5 }}
+                />
+              ) : null}
+              
+              {showLegend ? (
+                <RechartsLegend
+                  verticalAlign="top"
+                  align="center"
+                  height={30}
+                  className="text-sm mb-6"
+                  onClick={(e) => {
+                    if (e && e.dataKey) {
+                      handleLegendClick(e.dataKey.toString());
+                    }
+                  }}
+                  iconType="circle"
+                  iconSize={10}
+                  formatter={(value: string) => (
+                    <span
+                      className={cn(
+                        "cursor-pointer",
+                        activeLegend !== undefined && activeLegend !== value
+                          ? "opacity-30"
+                          : ""
+                      )}
+                    >
+                      {value}
+                    </span>
+                  )}
+                  wrapperStyle={{ paddingBottom: "1rem" }}
+                />
+              ) : null}
+              
+              {categories.map((category, idx) => (
+                <Bar
+                  key={category}
+                  name={category}
+                  dataKey={category}
+                  fill={colorMap[colors[idx % colors.length]]}
+                  radius={[4, 4, 0, 0]}
+                  stackId={stack ? "a" : undefined}
+                  onClick={(props) => handleBarClick(props)}
+                  isAnimationActive={showAnimation}
+                  animationDuration={animationDuration}
+                  shape={(props: any) => renderShape(props, activeBar, activeLegend, layout)}
+                />
+              ))}
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              {noDataText}
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
+)
+
+BarChart.displayName = "BarChart"
+
+// Example data for demo purposes
+const data = [
+  {
+    date: "Apr 23",
+    "Active Hours": 234,
+    Recovery: 93,
+  },
+  {
+    date: "May 23",
+    "Active Hours": 320,
+    Recovery: 120,
+  },
+  {
+    date: "Jun 23",
+    "Active Hours": 295,
+    Recovery: 118,
+  },
+  {
+    date: "Jul 23",
+    "Active Hours": 180,
+    Recovery: 90,
+  },
+  {
+    date: "Aug 23",
+    "Active Hours": 175,
+    Recovery: 93,
+  },
+  {
+    date: "Sep 23",
+    "Active Hours": 179,
+    Recovery: 99,
+  },
+  {
+    date: "Oct 23",
+    "Active Hours": 143,
+    Recovery: 101,
+  },
+  {
+    date: "Nov 23",
+    "Active Hours": 164,
+    Recovery: 104,
+  },
+  {
+    date: "Dec 23",
+    "Active Hours": 201,
+    Recovery: 86,
+  },
+  {
+    date: "Jan 24",
+    "Active Hours": 301,
+    Recovery: 82,
+  },
+  {
+    date: "Feb 24",
+    "Active Hours": 235,
+    Recovery: 72,
+  },
+  {
+    date: "Mar 24",
+    "Active Hours": 290,
+    Recovery: 62,
+  },
+]
+
+export const BarChartExample = () => {
+  return (
+    <BarChart
+      className="h-64"
+      data={data}
+      index="date"
+      categories={["Active Hours", "Recovery"]}
+      yAxisWidth={60}
+      maxValue={400}
+      onValueChange={(v) => console.log(v)}
+      valueFormatter={(number: number) =>
+        `${Intl.NumberFormat("us").format(number).toString()}`
+      }
+    />
+  )
 }
 
 export {

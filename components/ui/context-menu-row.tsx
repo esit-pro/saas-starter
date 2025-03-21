@@ -15,18 +15,20 @@ export function ContextMenuRow<TData>({
   row,
   renderContextMenu,
   children,
+  asChild, // Extract asChild prop to prevent it from being passed to DOM elements
   ...props
 }: ContextMenuRowProps<TData>) {
-  return (
+  // Pass through all props except asChild to the underlying element
+  return children ? (
+    React.cloneElement(React.Children.only(children) as React.ReactElement, props)
+  ) : (
     <TableRow {...props}>
-      {children || 
-        row.getVisibleCells().map((cell) => (
-          <TableCell key={cell.id}>
-            {cell.column.columnDef.cell ? 
-              flexRender(cell.column.columnDef.cell, cell.getContext()) : null}
-          </TableCell>
-        ))
-      }
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          {cell.column.columnDef.cell ? 
+            flexRender(cell.column.columnDef.cell, cell.getContext()) : null}
+        </TableCell>
+      ))}
     </TableRow>
   )
 } 

@@ -82,7 +82,7 @@ export function CreateTicketForm({ clients, onCreateTicket }: CreateTicketFormPr
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detailed description of the issue"
-              className="w-full min-h-[100px] px-3 py-2 bg-transparent text-sm rounded-md border border-input focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground resize-none"
+              className="w-full min-h-[100px] px-3 py-2 bg-white dark:bg-zinc-800 text-sm rounded-md border border-input focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground resize-none"
             />
           </div>
           
@@ -92,7 +92,7 @@ export function CreateTicketForm({ clients, onCreateTicket }: CreateTicketFormPr
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as any)}
-              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
