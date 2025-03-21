@@ -57,22 +57,58 @@
 - **Component Design**: Components use Radix UI primitives customized with Tailwind
   - Form controls, dialogs, and interactive elements follow shadcn/ui principles
 
-## Data Interaction Components
-- **Form Components**: All form components use React's server actions for data submission
-  - Forms typically call type-safe actions from respective `actions.ts` files
-  - Use `useOptimistic` hook for immediate UI updates before server response
-  - Include proper loading states with disabled inputs during submission
+## Data and UI Interaction Patterns
 
-- **TicketComments**: Implements real-time comments with optimistic updates
-  - Uses `addTicketComment` server action from `tickets/actions.ts`
-  - Displays comments with formatting based on internal/external status
-  - Shows relative time using `formatDistanceToNow` from `date-fns`
-  - Maintains scroll position in comment history
+### Server Actions
+- **Action Patterns**:
+  - Each module has its own `actions.ts` file in the module folder (e.g., `clients/actions.ts`)
+  - Actions are strongly typed with Zod schemas for validation
+  - Use `validatedActionWithUser` wrapper for secure, authenticated actions
+  - Return a consistent result shape: `{ success, error, data }` for predictable handling
+  - Example: `createTicket`, `updateClient`, `addTicketComment`
 
-- **Data Tables**: Interactive tables with real-time data
-  - Fetches data from server actions in the respective module
-  - Implements client-side sorting, filtering, and pagination
-  - Uses strong typing with TypeScript interfaces aligned with database schema
+- **Data Fetching Actions**:
+  - Module-specific data fetching actions (e.g., `getClientsForTeam`, `getTicketById`)
+  - Support team-based data isolation using `getUserWithTeam`
+  - Auto-create teams for new users when needed (in create/list operations)
+  - Include field selection and joins for related entities
+  - Support optional FormData parameter for form submission compatibility
+
+### Form Components
+- **Edit Forms Pattern**:
+  - Form components are client components with their own data loading logic
+  - Load data with `useEffect` when mounted, using entity-specific fetch action
+  - Manage loading states with `useState` and conditional rendering
+  - Handle form submission with proper try/catch and toast notifications
+  - Support editing related entities with dropdowns (clients, assignees, etc.)
+  - Example: `client-edit-form.tsx`, `ticket-edit-form.tsx`
+
+- **Common Form Features**:
+  - Use shadcn/ui form elements for consistent styling
+  - Display required fields with red asterisk indicator
+  - Implement proper validation with required attributes and client-side checks
+  - Disable form elements and show spinners during submission
+  - Use FormData for server action compatibility
+
+### Real-Time UI Patterns
+- **Optimistic Updates**:
+  - Use React's `useOptimistic` hook for instant UI feedback
+  - Create optimistic versions of data with temporary IDs
+  - Update local state immediately before server confirmation
+  - Revert to server state on error with toast notification
+  - Example: `TicketComments` component for real-time commenting
+
+- **List-Detail Relationship**:
+  - List pages fetch data with server actions (e.g., `getTicketsForTeam`)
+  - Detail/edit pages use ID from URL parameters with `useParams()`
+  - Navigation between list and detail views with Next.js router
+  - Consistent back navigation with `router.back()` in edit forms
+
+- **Interactive Data Views**:
+  - Data tables with client-side sorting and filtering
+  - Dropdowns for related entities (`ClientCombobox` for selecting clients)
+  - Form field dependencies (e.g., assignee dropdown populated with team members)
+  - Date formatting with `date-fns` for consistent presentation
 
 ## Layout Patterns
 - **Dashboard Layout**: Responsive dashboard with modern sidebar navigation
