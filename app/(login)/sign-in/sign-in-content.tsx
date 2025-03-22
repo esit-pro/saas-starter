@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,6 +13,34 @@ import AuthNotification from '../components/auth-notification';
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
+  
+  // Check for registration_disabled cookie and show toast notification
+  useEffect(() => {
+    // Parse cookies from document.cookie
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return undefined;
+    };
+    
+    const registrationDisabled = getCookie('registration_disabled');
+    
+    if (registrationDisabled === 'true') {
+      // Display toast notification
+      toast.error(
+        'Registration is temporarily disabled while we enhance the platform',
+        {
+          id: 'registration-disabled', // Prevent duplicate toasts
+          duration: 5000, // 5 seconds
+          position: 'top-right'
+        }
+      );
+      
+      // Remove the cookie to prevent showing on refresh
+      document.cookie = 'registration_disabled=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+  }, []);
   
   return (
     <div className="w-full h-full flex justify-center items-center">

@@ -11,11 +11,26 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
   
-  // Temporarily redirect sign-up requests to sign-in with a message
+  // Set response for further cookie modifications
+  let res = NextResponse.next();
+  
+  // For sign-up, set a cookie indicating registration is disabled and redirect to sign-in
   if (pathname.startsWith('/sign-up')) {
     const signInUrl = new URL('/sign-in', request.url);
-    signInUrl.searchParams.set('message', 'Registration is temporarily disabled while we enhance the platform');
-    return NextResponse.redirect(signInUrl);
+    res = NextResponse.redirect(signInUrl);
+    
+    // Set a cookie to indicate registration is disabled (expires in 1 minute)
+    res.cookies.set({
+      name: 'registration_disabled',
+      value: 'true',
+      httpOnly: false, // Make it accessible to client-side JS
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60, // 1 minute expiry
+      path: '/',
+    });
+    
+    return res;
   }
   
   // Check if this is a public route that doesn't need authentication
@@ -25,8 +40,6 @@ export async function middleware(request: NextRequest) {
   if (!isPublicRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
-
-  let res = NextResponse.next();
 
   // If there's a session cookie, verify and refresh it
   if (sessionCookie && request.method === "GET") {

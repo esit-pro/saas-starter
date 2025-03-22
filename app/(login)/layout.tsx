@@ -4,6 +4,7 @@ import React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthNotificationProvider } from '@/lib/context/auth-notification-context';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function AuthLayout({
   children,
@@ -19,6 +20,7 @@ export default function AuthLayout({
         disableTransitionOnChange
       >
         <div className="flex min-h-screen flex-col lg:bg-zinc-900">
+          <Toaster position="top-right" />
           {/* Header for mobile/tablet - fixed positioning */}
           <header className="fixed right-6 top-6 z-50 md:hidden">
             <ThemeToggle />
