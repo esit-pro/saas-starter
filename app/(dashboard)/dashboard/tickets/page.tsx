@@ -311,29 +311,71 @@ function TicketDetailPane({
                   <Input
                     value={displayData.title || ''}
                     onChange={(e) => handleChange('title', e.target.value)}
-                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                    className="text-2xl font-bold h-auto py-1 px-2"
                   />
                 ) : (
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.title}</h2>
                 )}
                 
-                {isEditing ? (
-                  <select
-                    value={displayData.status}
-                    onChange={(e) => handleChange('status', e.target.value)}
-                    className="ml-4 px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border border-blue-300 dark:border-blue-700"
-                  >
-                    <option value="open">Open</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="on-hold">On Hold</option>
-                    <option value="completed">Completed</option>
-                    <option value="closed">Closed</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[displayData.status]}`}>
-                    {displayData.status}
-                  </span>
-                )}
+                <div className="flex items-center">
+                  {isEditing ? (
+                    <select
+                      value={displayData.status}
+                      onChange={(e) => handleChange('status', e.target.value)}
+                      className="px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border"
+                    >
+                      <option value="open">Open</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="on-hold">On Hold</option>
+                      <option value="completed">Completed</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[displayData.status]}`}>
+                      {displayData.status}
+                    </span>
+                  )}
+                  
+                  {isEditing ? (
+                    <div className="flex gap-2 ml-3">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedData({});
+                        }}
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={handleSave}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save'
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center ml-3"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center flex-wrap gap-4 mt-1">
                 <div className="flex items-center">
@@ -346,7 +388,7 @@ function TicketDetailPane({
                       <select
                         value={displayData.clientId}
                         onChange={(e) => handleChange('clientId', Number(e.target.value))}
-                        className="bg-white dark:bg-zinc-800 rounded border border-blue-300 dark:border-blue-700 text-sm"
+                        className="bg-white dark:bg-zinc-800 rounded border text-sm"
                       >
                         {clients.map(client => (
                           <option key={client.id} value={client.id}>{client.name}</option>
@@ -364,61 +406,23 @@ function TicketDetailPane({
             </div>
           </div>
           <div>
-            {isEditing ? (
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditedData({});
-                  }}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setIsEditing(true)}
-                className="flex items-center"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
+            {/* Edit buttons moved to status line */}
           </div>
         </div>
 
         {/* Ticket details cards */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 ${isEditing ? 'border-2 border-blue-200 dark:border-blue-900/40 rounded-lg p-2' : ''}`}>
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 ${isEditing ? 'rounded-lg p-2' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Priority
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+              {isEditing && <span className="ml-2 text-xs">(Editing)</span>}
             </h3>
             <div className="flex items-center">
               {isEditing ? (
                 <select
                   value={displayData.priority}
                   onChange={(e) => handleChange('priority', e.target.value)}
-                  className="w-full bg-white dark:bg-zinc-800 rounded border border-blue-300 dark:border-blue-700 p-2"
+                  className="w-full bg-white dark:bg-zinc-800 rounded border p-2"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -434,7 +438,7 @@ function TicketDetailPane({
             </div>
           </div>
           
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Time Tracked</h3>
             <div className="flex items-center">
               <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
@@ -444,12 +448,12 @@ function TicketDetailPane({
             </div>
           </div>
           
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">
               {isEditing ? (
                 <div className="flex items-center justify-between">
                   <span>Category</span>
-                  {isEditing && <span className="text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+                  {isEditing && <span className="text-xs">(Editing)</span>}
                 </div>
               ) : (
                 "Category"
@@ -461,7 +465,6 @@ function TicketDetailPane({
                   value={displayData.category || ''}
                   onChange={(e) => handleChange('category', e.target.value)}
                   placeholder="e.g., Hardware, Software, Network"
-                  className="border-blue-300 dark:border-blue-700"
                 />
               ) : (
                 <span className="font-medium text-gray-900 dark:text-foreground">
@@ -474,17 +477,17 @@ function TicketDetailPane({
 
         {/* Description Section */}
         {(displayData.description || isEditing) && (
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Description
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+              {isEditing && <span className="ml-2 text-xs">(Editing)</span>}
             </h3>
             {isEditing ? (
               <Textarea
                 value={displayData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Enter detailed description of the issue"
-                className="min-h-[120px] border-blue-300 dark:border-blue-700"
+                className="min-h-[120px]"
               />
             ) : (
               <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
