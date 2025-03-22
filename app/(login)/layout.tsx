@@ -18,7 +18,7 @@ export default function AuthLayout({
         enableSystem
         disableTransitionOnChange
       >
-        <div className="flex min-h-screen flex-col">
+        <div className="flex min-h-screen flex-col lg:bg-zinc-900">
           {/* Header for mobile/tablet - fixed positioning */}
           <header className="fixed right-6 top-6 z-50 md:hidden">
             <ThemeToggle />

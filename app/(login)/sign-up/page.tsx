@@ -33,8 +33,7 @@ export default function SignUpPage() {
           </div>
           
           {/* Left side - brand (visible on lg screens) */}
-          <div className="hidden lg:flex lg:w-1/2 relative flex-col bg-muted p-10 text-white dark:border-r">
-            <div className="absolute inset-0 bg-zinc-900" />
+          <div className="hidden lg:flex lg:w-1/2 relative flex-col bg-transparent p-10 text-white dark:border-r">
             <div className="relative z-20 flex items-center text-lg font-medium">
               <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
                 <span className="text-primary-foreground font-bold text-sm">E</span>
@@ -52,7 +51,7 @@ export default function SignUpPage() {
           </div>
           
           {/* Right side - form */}
-          <div className="flex-1 flex items-center justify-center p-4 md:p-6 lg:p-8">
+          <div className="flex-1 flex items-center justify-center p-4 md:p-6 lg:p-8 lg:bg-background">
             <div className="w-full max-w-[350px] mx-auto my-auto">
               <div className="flex flex-col space-y-6">
                 <div className="flex flex-col space-y-2 text-center">
