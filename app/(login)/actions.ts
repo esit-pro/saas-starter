@@ -72,135 +72,168 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     // Continue with login even if cleanup fails
   }
 
-  const userWithTeam = await db
-    .select({
-      user: users,
-      team: teams,
-    })
-    .from(users)
-    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
-    .where(eq(users.email, email))
-    .limit(1);
+  try {
+    const userWithTeam = await db
+      .select({
+        user: users,
+        team: teams,
+      })
+      .from(users)
+      .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+      .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+      .where(eq(users.email, email))
+      .limit(1);
 
-  if (userWithTeam.length === 0) {
-    return {
-      error: 'Invalid email or password. Please try again.',
-      messageKey: 'invalid-credentials' as AuthMessageKey,
-      email,
-      password,
-    };
-  }
-
-  const { user: foundUser, team: foundTeam } = userWithTeam[0];
-
-  const isPasswordValid = await comparePasswords(
-    password,
-    foundUser.passwordHash,
-  );
-
-  if (!isPasswordValid) {
-    return {
-      error: 'Invalid email or password. Please try again.',
-      messageKey: 'invalid-credentials' as AuthMessageKey,
-      email,
-      password,
-    };
-  }
-
-  // Check if 2FA is enabled
-  if (foundUser.twoFactorEnabled) {
-    // Check if user has a phone number for 2FA
-    if (!foundUser.phoneNumber) {
-      console.error(`User ID ${foundUser.id} has 2FA enabled but no phone number`);
+    if (userWithTeam.length === 0) {
       return {
-        error: 'Your account requires two-factor authentication, but no phone number is set up. Please contact support.',
+        error: 'Invalid email or password. Please try again.',
+        messageKey: 'invalid-credentials' as AuthMessageKey,
         email,
+        password,
       };
     }
-    
-    // Check rate limiting before generating a new code
-    const canGenerate = await canGenerateCode(foundUser.id, '2fa_login');
-    if (!canGenerate) {
+
+    const { user: foundUser, team: foundTeam } = userWithTeam[0];
+
+    const isPasswordValid = await comparePasswords(
+      password,
+      foundUser.passwordHash,
+    );
+
+    if (!isPasswordValid) {
       return {
-        error: 'Too many code requests. Please try again later.',
-        messageKey: 'too-many-code-requests' as AuthMessageKey,
+        error: 'Invalid email or password. Please try again.',
+        messageKey: 'invalid-credentials' as AuthMessageKey,
         email,
+        password,
       };
     }
-    
-    // Generate and send 2FA code
-    const code = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
-    // First attempt to send the code before storing it
-    let sent = false;
-    try {
-      sent = await send2FACode(foundUser.phoneNumber, code);
-      
-      if (!sent) {
-        console.error(`Failed to send 2FA code to user ${foundUser.id} with phone ${foundUser.phoneNumber}`);
-        
-        // Check if phone number is valid
-        const phoneNumber = foundUser.phoneNumber;
-        const digitsOnly = phoneNumber.replace(/\D/g, '');
-        if (digitsOnly.length < 10) {
-          return {
-            error: 'Your phone number appears to be invalid. Please update your profile with a valid phone number.',
-            email,
-          };
-        }
-        
+
+    // Check if 2FA is enabled
+    if (foundUser.twoFactorEnabled) {
+      // Check if user has a phone number for 2FA
+      if (!foundUser.phoneNumber) {
+        console.error(`User ID ${foundUser.id} has 2FA enabled but no phone number`);
         return {
-          error: 'Unable to send verification code. Possible issues: Twilio service not configured properly or phone number format incorrect. Check server logs for details.',
+          error: 'Your account requires two-factor authentication, but no phone number is set up. Please contact support.',
           email,
         };
       }
       
-      // Only store the code if sending was successful
-      await db.insert(verificationCodes).values({
-        userId: foundUser.id,
-        code,
-        type: '2fa_login',
-        expiresAt,
-      });
-      
-    } catch (error) {
-      console.error('Error in 2FA code sending:', error);
-      
-      // Get more specific error information
-      const errorDetails = error instanceof Error ? error.message : 'Unknown error';
-      
+      // Check rate limiting before generating a new code
+      try {
+        const canGenerate = await canGenerateCode(foundUser.id, '2fa_login');
+        if (!canGenerate) {
+          return {
+            error: 'Too many code requests. Please try again later.',
+            messageKey: 'too-many-code-requests' as AuthMessageKey,
+            email,
+          };
+        }
+        
+        // Generate and send 2FA code
+        const code = generateVerificationCode();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        
+        // First attempt to send the code before storing it
+        let sent = false;
+        try {
+          sent = await send2FACode(foundUser.phoneNumber, code);
+          
+          if (!sent) {
+            console.error(`Failed to send 2FA code to user ${foundUser.id} with phone ${foundUser.phoneNumber}`);
+            
+            // Check if phone number is valid
+            const phoneNumber = foundUser.phoneNumber;
+            const digitsOnly = phoneNumber.replace(/\D/g, '');
+            if (digitsOnly.length < 10) {
+              return {
+                error: 'Your phone number appears to be invalid. Please update your profile with a valid phone number.',
+                email,
+              };
+            }
+            
+            return {
+              error: 'Unable to send verification code. Possible issues: Twilio service not configured properly or phone number format incorrect. Check server logs for details.',
+              email,
+            };
+          }
+          
+          // Only store the code if sending was successful
+          try {
+            await db.insert(verificationCodes).values({
+              userId: foundUser.id,
+              code,
+              type: '2fa_login',
+              expiresAt,
+            });
+          } catch (dbError) {
+            console.error('Error storing verification code:', dbError);
+            return {
+              error: 'System error: Failed to store verification code. Please try again.',
+              email,
+            };
+          }
+          
+        } catch (error) {
+          console.error('Error in 2FA code sending:', error);
+          
+          // Get more specific error information
+          const errorDetails = error instanceof Error ? error.message : 'Unknown error';
+          
+          return {
+            error: `Failed to send verification code: ${errorDetails}. This might be due to an invalid phone number, service configuration issues, or a Twilio service disruption.`,
+            email,
+          };
+        }
+        
+        // Log success if we reach here
+        console.log(`Successfully sent 2FA code to user ${foundUser.id}`);
+        
+        // Return success but with 2FA required flag
+        return {
+          requiresTwoFactor: true,
+          messageKey: 'two-factor-required' as AuthMessageKey,
+          email,
+        };
+        
+      } catch (rateLimitError) {
+        console.error('Error checking rate limits:', rateLimitError);
+        return {
+          error: 'System error when processing 2FA. Please try again later.',
+          email,
+        };
+      }
+    }
+
+    // Normal sign-in flow if 2FA is not enabled
+    try {
+      await Promise.all([
+        setSession(foundUser),
+        logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+      ]);
+
+      const redirectTo = formData.get('redirect') as string | null;
+      if (redirectTo === 'checkout') {
+        const priceId = formData.get('priceId') as string;
+        return createCheckoutSession({ team: foundTeam, priceId });
+      }
+
+      redirect('/');
+    } catch (sessionError) {
+      console.error('Error creating session:', sessionError);
       return {
-        error: `Failed to send verification code: ${errorDetails}. This might be due to an invalid phone number, service configuration issues, or a Twilio service disruption.`,
+        error: 'Failed to create user session. Please try again.',
         email,
       };
     }
-    
-    // Log success if we reach here
-    console.log(`Successfully sent 2FA code to user ${foundUser.id}`);
-    
-    // Return success but with 2FA required flag
+  } catch (error) {
+    console.error('Unexpected error during sign-in:', error);
     return {
-      requiresTwoFactor: true,
-      messageKey: 'two-factor-required' as AuthMessageKey,
+      error: 'An unexpected error occurred. Please try again later.',
       email,
     };
   }
-
-  // Normal sign-in flow if 2FA is not enabled
-  await Promise.all([
-    setSession(foundUser),
-    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
-  ]);
-
-  const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: foundTeam, priceId });
-  }
-
-  redirect('/');
 });
 
 const signUpSchema = z.object({

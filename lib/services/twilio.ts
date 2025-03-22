@@ -78,10 +78,16 @@ function initTwilio() {
   }
   
   if (twilioPhoneNumber) {
-    normalizedTwilioPhoneNumber = twilioPhoneNumber.startsWith('+') 
-      ? twilioPhoneNumber 
-      : `+${twilioPhoneNumber.replace(/\D/g, '')}`;
-    console.log(`Using Twilio phone number: ${normalizedTwilioPhoneNumber}`);
+    try {
+      normalizedTwilioPhoneNumber = twilioPhoneNumber.startsWith('+') 
+        ? twilioPhoneNumber 
+        : `+${twilioPhoneNumber.replace(/\D/g, '')}`;
+      console.log(`Using Twilio phone number: ${normalizedTwilioPhoneNumber}`);
+    } catch (error) {
+      console.error('Error normalizing Twilio phone number:', error);
+      configWarningLogged = true;
+      configStatus.configWarningLogged = true;
+    }
   } else {
     console.error('Missing TWILIO_PHONE_NUMBER in environment variables');
     configWarningLogged = true;

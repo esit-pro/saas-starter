@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 import { setSession } from '@/lib/auth/session';
 import { canAttemptVerification, cleanupExpiredCodes } from '@/lib/services/cleanup';
+import { getUser } from '@/lib/db/queries';
 
 // Schema for verifying a 2FA code
 const verify2FASchema = z.object({
@@ -249,7 +250,4 @@ export async function GET(request: NextRequest) {
     console.error('Error checking 2FA status:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-// Import for getUser missing - add it
-import { getUser } from '@/lib/db/queries'; 
+} 
