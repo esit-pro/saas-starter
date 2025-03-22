@@ -14,23 +14,21 @@ export async function middleware(request: NextRequest) {
   // Set response for further cookie modifications
   let res = NextResponse.next();
   
-  // For sign-up, set a cookie indicating registration is disabled and redirect to sign-in
+  // Set registration disabled cookie for all responses
+  res.cookies.set({
+    name: 'registration_disabled',
+    value: 'true',
+    httpOnly: false, // Make it accessible to client-side JS
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 30, // 30 days expiry
+    path: '/',
+  });
+  
+  // For sign-up, redirect to sign-in
   if (pathname.startsWith('/sign-up')) {
     const signInUrl = new URL('/sign-in', request.url);
-    res = NextResponse.redirect(signInUrl);
-    
-    // Set a cookie to indicate registration is disabled (expires in 1 minute)
-    res.cookies.set({
-      name: 'registration_disabled',
-      value: 'true',
-      httpOnly: false, // Make it accessible to client-side JS
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60, // 1 minute expiry
-      path: '/',
-    });
-    
-    return res;
+    return NextResponse.redirect(signInUrl);
   }
   
   // Check if this is a public route that doesn't need authentication

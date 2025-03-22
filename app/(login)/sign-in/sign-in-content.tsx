@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import AuthNotification from '../components/auth-notification';
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
+  const [isRegistrationDisabled, setIsRegistrationDisabled] = useState(false);
   
   // Check for registration_disabled cookie and show toast notification
   useEffect(() => {
@@ -37,10 +38,24 @@ export default function SignInContent() {
         }
       );
       
+      // Set the disabled state
+      setIsRegistrationDisabled(true);
+      
       // Remove the cookie to prevent showing on refresh
       document.cookie = 'registration_disabled=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
   }, []);
+  
+  // Function to handle signup link clicks
+  const handleSignUpClick = (e: React.MouseEvent) => {
+    if (isRegistrationDisabled) {
+      e.preventDefault();
+      toast.error('Registration is temporarily disabled while we enhance the platform', {
+        id: 'registration-disabled',
+        duration: 3000
+      });
+    }
+  };
   
   return (
     <div className="w-full h-full flex justify-center items-center">
@@ -50,10 +65,13 @@ export default function SignInContent() {
         <div className="absolute right-8 top-8 z-50 hidden md:flex items-center gap-4">
           <ThemeToggle />
           <Link
-            href="/sign-up"
+            href={isRegistrationDisabled ? '#' : "/sign-up"}
+            onClick={handleSignUpClick}
             className={cn(
-              buttonVariants({ variant: 'ghost' })
+              buttonVariants({ variant: 'ghost' }),
+              isRegistrationDisabled && "opacity-50 cursor-not-allowed pointer-events-none"
             )}
+            aria-disabled={isRegistrationDisabled}
           >
             Sign Up
           </Link>
@@ -111,12 +129,25 @@ export default function SignInContent() {
               
               <div className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Link href="/sign-up" className="hover:text-brand underline underline-offset-4 md:hidden">
+                <Link 
+                  href={isRegistrationDisabled ? '#' : "/sign-up"} 
+                  onClick={handleSignUpClick}
+                  className={cn(
+                    "hover:text-brand underline underline-offset-4 md:hidden",
+                    isRegistrationDisabled && "opacity-50 cursor-not-allowed pointer-events-none"
+                  )}
+                  aria-disabled={isRegistrationDisabled}
+                >
                   Sign up
                 </Link>
                 <Link 
-                  href="/sign-up" 
-                  className="hover:text-brand underline underline-offset-4 hidden md:inline"
+                  href={isRegistrationDisabled ? '#' : "/sign-up"} 
+                  onClick={handleSignUpClick}
+                  className={cn(
+                    "hover:text-brand underline underline-offset-4 hidden md:inline",
+                    isRegistrationDisabled && "opacity-50 cursor-not-allowed pointer-events-none"
+                  )}
+                  aria-disabled={isRegistrationDisabled}
                 >
                   Sign up
                 </Link>
