@@ -158,14 +158,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
         }
         
         return {
-          error: 'We were unable to send your verification code. Please check your phone number or try again later.',
+          error: 'Unable to send verification code. Possible issues: Twilio service not configured properly or phone number format incorrect. Check server logs for details.',
           email,
         };
       }
     } catch (error) {
       console.error('Error in 2FA code sending:', error);
+      
+      // Get more specific error information
+      const errorDetails = error instanceof Error ? error.message : 'Unknown error';
+      
       return {
-        error: 'An error occurred while sending your verification code. This might be due to an invalid phone number or a service disruption.',
+        error: `Failed to send verification code: ${errorDetails}. This might be due to an invalid phone number, service configuration issues, or a Twilio service disruption.`,
         email,
       };
     }

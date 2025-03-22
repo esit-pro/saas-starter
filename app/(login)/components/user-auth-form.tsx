@@ -197,6 +197,15 @@ export function UserAuthForm({
     }
   }, [state]);
 
+  // Helper to check if the error is likely a Twilio issue
+  const isTwilioError = () => {
+    return state.error && (
+      state.error.includes('verification code') || 
+      state.error.includes('Twilio') || 
+      state.error.includes('phone')
+    );
+  };
+
   // Handler for password input changes
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
@@ -403,8 +412,30 @@ export function UserAuthForm({
             </>
           )}
           
-          {state?.error && (
-            <div className="text-sm font-medium text-destructive">{state.error}</div>
+          {state.error && (
+            <div className="p-3 text-sm rounded-md bg-red-50 border border-red-200 text-red-800 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 text-red-500" />
+              <div>
+                <p>{state.error}</p>
+                {isTwilioError() && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs font-semibold">
+                      Troubleshooting Info
+                    </summary>
+                    <div className="mt-2 text-xs space-y-1 p-2 bg-red-100 rounded">
+                      <p>Possible Twilio configuration issues:</p>
+                      <ul className="list-disc list-inside">
+                        <li>Twilio account credentials (SID/Auth Token) may be incorrect</li>
+                        <li>Twilio phone number may not be configured properly</li>
+                        <li>Phone number format might be invalid or not supported</li>
+                        <li>Twilio service may be experiencing disruptions</li>
+                      </ul>
+                      <p className="font-semibold pt-1">Contact site administrator with this error message.</p>
+                    </div>
+                  </details>
+                )}
+              </div>
+            </div>
           )}
           
           <Button 

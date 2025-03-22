@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       if (!sent) {
         console.error(`Failed to send 2FA code to user ${user.id} with phone ${user.phoneNumber}`);
         return NextResponse.json({ 
-          error: 'We were unable to send your verification code. Please check your phone number or try again later.' 
+          error: 'Unable to send verification code. Twilio service may not be configured properly or the phone number format is incorrect. Check server logs for details.' 
         }, { status: 500 });
       }
       
@@ -110,20 +110,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     } catch (smsError) {
       console.error(`SMS sending error:`, smsError);
+      const errorDetails = smsError instanceof Error ? smsError.message : 'Unknown error';
       return NextResponse.json({ 
-        error: 'We were unable to send your verification code. Please try again later.' 
+        error: `Failed to send verification code: ${errorDetails}. This might be due to Twilio configuration issues.` 
       }, { status: 500 });
     }
   } catch (error) {
     console.error('Unhandled error in 2FA code resend:', error);
     
     // Provide more specific error message if possible
+    let errorMessage = 'Unknown error';
     if (error instanceof Error) {
-      console.error('Error details:', error.message);
+      errorMessage = error.message;
+      console.error('Error details:', errorMessage);
     }
     
     return NextResponse.json({ 
-      error: 'An error occurred while sending your verification code. Please try again later.' 
+      error: `Error sending verification code: ${errorMessage}. Please contact support if this issue persists.` 
     }, { status: 500 });
   }
 } 
