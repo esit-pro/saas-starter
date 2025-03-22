@@ -6,6 +6,9 @@ import { logActivity } from '@/lib/utils/activity-logger';
 // Cache to store which columns exist in each table
 const tableColumnsMap = new Map<any, Set<string>>();
 
+// Known audit fields that may or may not exist in tables
+const COMMON_AUDIT_FIELDS = ['createdBy', 'updatedBy', 'deletedBy', 'teamId', 'createdAt', 'updatedAt', 'deletedAt'];
+
 /**
  * Check if a column exists in a table by examining a sample row
  * @param table The database table
@@ -15,18 +18,67 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
   // Get the table name
   const tableName = table._.name;
   
+  // For sensitive audit fields, we need to be more careful
+  if (['createdBy', 'updatedBy', 'deletedBy'].includes(columnName)) {
+    // Specific checks for audit columns that are causing issues
+    try {
+      // Tables with complete audit support
+      if (['expenses', 'time_entries', 'ticket_comments'].includes(tableName)) {
+        // These tables support all audit columns
+        return true;
+      }
+      
+      // These tables have createdBy, updatedBy but not deletedBy
+      if (tableName === 'clients') {
+        // Only return true for columns that actually exist
+        return columnName !== 'deletedBy'; // clients has createdBy and updatedBy but not deletedBy
+      }
+      
+      // These tables don't have any of the audit columns
+      if (['service_tickets', 'users', 'teams', 'team_members', 'activity_logs', 'invitations', 'verification_codes'].includes(tableName)) {
+        console.log(`Table ${tableName} is known to not have column ${columnName}`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error in hardcoded column check for ${tableName}.${columnName}:`, error);
+      return false;
+    }
+  }
+  
   // Check if we've already cached the column structure
   if (tableColumnsMap.has(tableName)) {
-    return tableColumnsMap.get(tableName)!.has(columnName);
+    const hasCol = tableColumnsMap.get(tableName)!.has(columnName);
+    console.log(`Using cached column check for ${tableName}.${columnName}: ${hasCol}`);
+    return hasCol;
   }
   
   try {
+    // Instead of querying data, let's check the schema directly if possible
+    // This is a safer approach that doesn't depend on data existing
+    
+    // First try to get the column info from the table schema
+    if (table[columnName]) {
+      // Cache positive result
+      if (!tableColumnsMap.has(tableName)) {
+        tableColumnsMap.set(tableName, new Set());
+      }
+      tableColumnsMap.get(tableName)!.add(columnName);
+      return true;
+    }
+    
+    // If it's not in the schema directly, we have to fall back to sample data
+    console.log(`Checking if column ${columnName} exists in table ${tableName} using sample data`);
     // Get a sample row to examine the column structure
     const [sampleRow] = await db.select().from(table).limit(1);
     
-    // If no rows exist, we can't determine columns this way
+    // If no rows exist, we take a more conservative approach
     if (!sampleRow) {
-      // Default to true for safety in this case
+      // If it's a common audit field that might not exist, return false for safety
+      if (COMMON_AUDIT_FIELDS.includes(columnName)) {
+        console.log(`No data to check column ${columnName} in ${tableName}, returning false for safety`);
+        return false;
+      }
+      // For other fields, default to true (assuming they should exist)
       return true;
     }
     
@@ -34,10 +86,12 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
     const columns = new Set(Object.keys(sampleRow));
     tableColumnsMap.set(tableName, columns);
     
-    return columns.has(columnName);
+    const hasCol = columns.has(columnName);
+    console.log(`Column check for ${tableName}.${columnName}: ${hasCol}`);
+    return hasCol;
   } catch (error) {
     console.error(`Error checking if column ${columnName} exists in table ${tableName}:`, error);
-    // Default to false on error
+    // Default to false on error for safety
     return false;
   }
 }

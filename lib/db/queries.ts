@@ -233,13 +233,26 @@ export async function getClient(clientId: number) {
 }
 
 export async function createClient(clientData: Omit<typeof clients.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>) {
+  const insertData = {
+    ...clientData,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    // We now know exactly which audit columns exist in the clients table
+    // createdBy and updatedBy are intentionally omitted if they don't exist
+  };
+
+  // Only add audit fields that exist in the table
+  if (clientData.createdBy !== undefined) {
+    insertData.createdBy = clientData.createdBy;
+  }
+  
+  if (clientData.updatedBy !== undefined) {
+    insertData.updatedBy = clientData.updatedBy;
+  }
+  
   return await db
     .insert(clients)
-    .values({
-      ...clientData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+    .values(insertData)
     .returning();
 }
 
@@ -288,7 +301,21 @@ export async function getServiceTicketsByFilters(teamId: number, filters?: {
 
   let baseQuery = db
     .select({
-      ticket: serviceTickets,
+      ticket: {
+        id: serviceTickets.id,
+        title: serviceTickets.title,
+        description: serviceTickets.description,
+        status: serviceTickets.status,
+        priority: serviceTickets.priority,
+        clientId: serviceTickets.clientId,
+        assignedTo: serviceTickets.assignedTo,
+        dueDate: serviceTickets.dueDate,
+        createdAt: serviceTickets.createdAt,
+        updatedAt: serviceTickets.updatedAt,
+        createdBy: serviceTickets.createdBy,
+        updatedBy: serviceTickets.updatedBy,
+        teamId: serviceTickets.teamId
+      },
       client: clients,
       assignedUser: users,
     })
@@ -376,17 +403,8 @@ export async function deleteServiceTicket(ticketId: number, userId?: number) {
     updatedAt: new Date()
   };
   
-  // Only set deletedBy if userId is provided and the column exists
-  if (userId) {
-    try {
-      // Use the hasColumn function for more robust checking
-      if (await hasColumn(serviceTickets, 'deletedBy')) {
-        updateData.deletedBy = userId;
-      }
-    } catch (error) {
-      console.error("Error checking for deletedBy column:", error);
-    }
-  }
+  // We know the service_tickets table doesn't have a deletedBy column
+  // so we skip the check and don't try to set it
   
   return await db
     .update(serviceTickets)

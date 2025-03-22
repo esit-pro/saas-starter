@@ -72,8 +72,23 @@ export function UserAuthForm({
       const data = await response.json();
       
       if (response.ok && data.success) {
-        // Redirect after successful 2FA
-        router.push('/');
+        // Redirect after successful 2FA with a small delay to ensure session is properly set
+        console.log('2FA verification successful, redirecting to home page...');
+        
+        // Get the redirect URL from the response or use the default
+        const redirectUrl = data.redirectUrl || '/';
+        
+        // Use a combination of client-side and server-side redirect for reliability
+        try {
+          // Allow a small delay for session to be fully established
+          setTimeout(() => {
+            window.location.href = redirectUrl;  // Force a full page navigation instead of client routing
+          }, 500);
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+          // Fallback to React Router if the direct navigation fails
+          router.push(redirectUrl);
+        }
       } else {
         // Provide more specific error messages based on error type
         if (data.error === 'Invalid or expired verification code') {

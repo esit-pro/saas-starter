@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { users, verificationCodes } from '@/lib/db/schema';
+import { users, verificationCodes, teams, teamMembers, activityLogs, ActivityType } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 import { setSession } from '@/lib/auth/session';
@@ -94,12 +94,48 @@ export async function POST(request: NextRequest) {
       
       await setSession(user);
       console.log(`Successfully created session for user ID: ${user.id}`);
+      
+      // Find the user's team for activity logging
+      const [userWithTeam] = await db
+        .select({
+          team: {
+            id: teams.id,
+          },
+        })
+        .from(users)
+        .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+        .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+        .where(eq(users.id, user.id))
+        .limit(1);
+      
+      // Log the sign in activity
+      if (userWithTeam?.team?.id) {
+        try {
+          // Only use fields that are defined in the schema
+          await db.insert(activityLogs).values({
+            teamId: userWithTeam.team.id,
+            userId: user.id,
+            action: ActivityType.SIGN_IN,
+            // Safely add IP address if available
+            ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '',
+            // Add timestamp explicitly
+            timestamp: new Date(),
+          });
+          console.log(`Activity log created for user ${user.id} sign in`);
+        } catch (logError) {
+          console.error('Failed to log activity:', logError);
+          // Continue anyway - logging failure shouldn't prevent sign in
+        }
+      }
     } catch (sessionError) {
       console.error('Error creating user session:', sessionError);
       return NextResponse.json({ error: 'Failed to create user session' }, { status: 500 });
     }
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      redirectUrl: '/' // Include redirect URL in the response
+    });
   } catch (error) {
     console.error('Error verifying 2FA code:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
