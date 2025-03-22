@@ -315,7 +315,7 @@ export function DataTable<TData extends { id: number }, TValue>({
                           }}
                           whileTap={{ cursor: 'grabbing' }}
                           drag="x"
-                          dragConstraints={{ left: 0, right: 0 }}
+                          dragConstraints={{ left: 0, right: 1 }}
                           dragElastic={0.1}
                           onDragEnd={(e, info) => handleSwipeEnd(rowData.id, info)}
                           onDrag={(e, info) => handleSwipeUpdate(rowData.id, info)}
