@@ -43,6 +43,13 @@
       "when": 1742639520665,
       "tag": "0005_dark_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742653520196,
+      "tag": "0006_ambiguous_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

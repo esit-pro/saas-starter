@@ -15,8 +15,27 @@ const COMMON_AUDIT_FIELDS = ['createdBy', 'updatedBy', 'deletedBy', 'teamId', 'c
  * @param columnName The column name to check
  */
 export async function hasColumn(table: any, columnName: string): Promise<boolean> {
-  // Get the table name
-  const tableName = table._.name;
+  // Get the table name safely
+  let tableName = "unknown";
+  try {
+    // Try different ways to access the table name
+    if (table._ && table._.name) {
+      tableName = table._.name;
+    } else if (table.$type && table.$type.name) {
+      tableName = table.$type.name;
+    } else if (typeof table.name === 'string') {
+      tableName = table.name;
+    } else {
+      // Try to infer table name from structure
+      if (table.id && table.name && table.contactName) {
+        tableName = "clients";
+      } else if (table.id && table.title && table.status) {
+        tableName = "service_tickets";
+      }
+    }
+  } catch (error) {
+    console.error('Error getting table name:', error);
+  }
   
   // For sensitive audit fields, we need to be more careful
   if (['createdBy', 'updatedBy', 'deletedBy'].includes(columnName)) {
@@ -36,7 +55,6 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
       
       // These tables don't have any of the audit columns
       if (['service_tickets', 'users', 'teams', 'team_members', 'activity_logs', 'invitations', 'verification_codes'].includes(tableName)) {
-        console.log(`Table ${tableName} is known to not have column ${columnName}`);
         return false;
       }
     } catch (error) {
@@ -48,7 +66,6 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
   // Check if we've already cached the column structure
   if (tableColumnsMap.has(tableName)) {
     const hasCol = tableColumnsMap.get(tableName)!.has(columnName);
-    console.log(`Using cached column check for ${tableName}.${columnName}: ${hasCol}`);
     return hasCol;
   }
   
@@ -67,7 +84,6 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
     }
     
     // If it's not in the schema directly, we have to fall back to sample data
-    console.log(`Checking if column ${columnName} exists in table ${tableName} using sample data`);
     // Get a sample row to examine the column structure
     const [sampleRow] = await db.select().from(table).limit(1);
     
@@ -75,7 +91,6 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
     if (!sampleRow) {
       // If it's a common audit field that might not exist, return false for safety
       if (COMMON_AUDIT_FIELDS.includes(columnName)) {
-        console.log(`No data to check column ${columnName} in ${tableName}, returning false for safety`);
         return false;
       }
       // For other fields, default to true (assuming they should exist)
@@ -87,7 +102,6 @@ export async function hasColumn(table: any, columnName: string): Promise<boolean
     tableColumnsMap.set(tableName, columns);
     
     const hasCol = columns.has(columnName);
-    console.log(`Column check for ${tableName}.${columnName}: ${hasCol}`);
     return hasCol;
   } catch (error) {
     console.error(`Error checking if column ${columnName} exists in table ${tableName}:`, error);

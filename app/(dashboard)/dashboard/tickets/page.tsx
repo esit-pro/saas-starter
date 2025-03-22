@@ -25,25 +25,22 @@ import {
   Paperclip
 } from 'lucide-react';
 import { 
-  getTicketsForTeam, 
-  getTicketById, 
-  createTicket, 
-  updateTicket, 
-  deleteTicket, 
-  getClientsForSelection, 
+  getTicketById,
+  createTicket,
+  updateTicket,
+  deleteTicket,
+  getTicketsForTeam,
+  getClientsForSelection,
   getTeamMembersForAssignment,
   deleteTimeEntry,
   addTicketComment
 } from './actions';
-import { SplitView } from '../../components/split-view';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { DataTable } from '../../components/data-table';
-import { TicketWidgetsCard } from '../../components/ticket-widgets-card';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -70,6 +67,7 @@ import { TicketComments, Comment as BaseComment } from '../../components/ticket-
 import { TimeEntryForm } from '../../components/time-entry-form';
 import { ExpenseForm } from '../../components/expense-form';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
 
 // Define the ServiceTicket type more accurately to match what comes from the database
 type ServiceTicket = {
@@ -737,6 +735,8 @@ export default function TicketsPage() {
   const [statusHistory, setStatusHistory] = useState<StatusChange[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ id: number; name: string; email: string }[]>([]);
+  const searchParams = useSearchParams();
+  const ticketIdFromUrl = searchParams.get('id');
   
   // Fetch clients and team members
   useEffect(() => {
@@ -768,108 +768,11 @@ export default function TicketsPage() {
     fetchData();
   }, []);
 
-  // Define a handler for row clicks
-  const handleRowClick = (row: any) => {
-    setSelectedTicket(row);
-  };
-  
-  // Create context menu items for the DataTable
-  const contextMenuItems = (row: any) => {
-    // Ensure row.original is available
-    if (!row?.original) {
-      console.error('Row original data missing in context menu');
-      return null;
-    }
-    
-    return (
-      <>
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Toggle selection - if already selected, deselect; otherwise select
-            setSelectedTicket(prev => prev?.id === row.original.id ? null : row.original);
-          }}
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          <span>View details</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Edit</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Select the ticket and show the time entry form
-            setSelectedTicket(row.original);
-          }}
-        >
-          <Clock className="mr-2 h-4 w-4" />
-          <span>Log Time</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
-          onClick={() => {
-            // Mark ticket as complete
-            const updatedTickets = tickets.map(t => 
-              t.id === row.original.id ? { ...t, status: 'completed' as const } : t
-            );
-            setTickets(updatedTickets);
-            
-            // Update the filtered lists
-            setCompletedTickets([
-              ...completedTickets, 
-              { ...row.original, status: 'completed' as const }
-            ]);
-            setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
-            
-            // Add a status change comment
-            handleAddComment({
-              ticketId: row.original.id,
-              content: `Status changed to completed`,
-              isInternal: true
-            });
-            
-            // Add a status change to history
-            const newStatusChange: StatusChange = {
-              id: statusHistory.length + 1,
-              ticketId: row.original.id,
-              status: 'completed',
-              timestamp: new Date(),
-              user: {
-                id: 1, // Current user ID
-                name: 'Jane Smith', // Current user name
-              }
-            };
-            setStatusHistory([newStatusChange, ...statusHistory]);
-          }}
-        >
-          <CheckCircle className="mr-2 h-4 w-4" />
-          <span>Complete</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
-          onClick={() => {
-            if (handleDeleteTicket) {
-              handleDeleteTicket(row.original.id);
-            }
-          }}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          <span>Delete</span>
-        </DropdownMenuItem>
-      </>
-    );
-  };
+  // Fetch tickets from the server
   useEffect(() => {
-    // Fetch tickets from the server
     async function fetchTickets() {
       try {
-        const result = await getTicketsForTeam();
+        const result = await getTicketsForTeam(new FormData());
         
         if (result.error) {
           console.error('Error fetching tickets:', result.error);
@@ -974,14 +877,126 @@ export default function TicketsPage() {
           setCompletedTickets(ticketsWithMetadata.filter(t => 
             t.status === 'completed' || t.status === 'closed'
           ));
+
+          // Check if we need to select a specific ticket from URL
+          if (ticketIdFromUrl) {
+            const ticketId = parseInt(ticketIdFromUrl);
+            const ticketToSelect = ticketsWithMetadata.find(t => t.id === ticketId);
+            if (ticketToSelect) {
+              setSelectedTicket(ticketToSelect);
+              // If the ticket is completed or closed, switch to the completed tab
+              if (ticketToSelect.status === 'completed' || ticketToSelect.status === 'closed') {
+                setSelectedTab('completed');
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch tickets:', error);
+        toast.error('Failed to load tickets');
       }
     }
-    
+
     fetchTickets();
-  }, []);
+  }, [ticketIdFromUrl]);
+
+  // Define a handler for row clicks
+  const handleRowClick = (row: any) => {
+    setSelectedTicket(row);
+  };
+  
+  // Create context menu items for the DataTable
+  const contextMenuItems = (row: any) => {
+    // Ensure row.original is available
+    if (!row?.original) {
+      console.error('Row original data missing in context menu');
+      return null;
+    }
+    
+    return (
+      <>
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Toggle selection - if already selected, deselect; otherwise select
+            setSelectedTicket(prev => prev?.id === row.original.id ? null : row.original);
+          }}
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          <span>View details</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
+            <Pencil className="mr-2 h-4 w-4" />
+            <span>Edit</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Select the ticket and show the time entry form
+            setSelectedTicket(row.original);
+          }}
+        >
+          <Clock className="mr-2 h-4 w-4" />
+          <span>Log Time</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Mark ticket as complete
+            const updatedTickets = tickets.map(t => 
+              t.id === row.original.id ? { ...t, status: 'completed' as const } : t
+            );
+            setTickets(updatedTickets);
+            
+            // Update the filtered lists
+            setCompletedTickets([
+              ...completedTickets, 
+              { ...row.original, status: 'completed' as const }
+            ]);
+            setActiveTickets(activeTickets.filter(t => t.id !== row.original.id));
+            
+            // Add a status change comment
+            handleAddComment({
+              ticketId: row.original.id,
+              content: `Status changed to completed`,
+              isInternal: true
+            });
+            
+            // Add a status change to history
+            const newStatusChange: StatusChange = {
+              id: statusHistory.length + 1,
+              ticketId: row.original.id,
+              status: 'completed',
+              timestamp: new Date(),
+              user: {
+                id: 1, // Current user ID
+                name: 'Jane Smith', // Current user name
+              }
+            };
+            setStatusHistory([newStatusChange, ...statusHistory]);
+          }}
+        >
+          <CheckCircle className="mr-2 h-4 w-4" />
+          <span>Complete</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
+          onClick={() => {
+            if (handleDeleteTicket) {
+              handleDeleteTicket(row.original.id);
+            }
+          }}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          <span>Delete</span>
+        </DropdownMenuItem>
+      </>
+    );
+  };
 
   // Handler for adding a new ticket
   const handleCreateTicket = async (ticketData: {
@@ -1344,7 +1359,7 @@ export default function TicketsPage() {
           <div>
             <div className="font-medium text-gray-900 dark:text-foreground">{row.original.title}</div>
             <div className="text-sm text-gray-500 dark:text-muted-foreground">
-              {row.original.client}
+              {row.original.client?.name || 'Unknown Client'}
             </div>
           </div>
         </div>
@@ -1376,7 +1391,7 @@ export default function TicketsPage() {
       header: 'Assigned To',
       cell: ({ row }: any) => (
         <div className="flex items-center">
-          {row.original.assignedTo}
+          {row.original.assignedUser ? row.original.assignedUser.name : 'Unassigned'}
         </div>
       ),
     },

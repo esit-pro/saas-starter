@@ -42,22 +42,12 @@ const createClientSchema = z.object({
 export const createClient = validatedActionWithUser(
   createClientSchema,
   async (data, _, user) => {
-    console.log('Creating client - authenticated user:', { 
-      id: user.id,
-      email: user.email,
-      role: user.role 
-    });
-    
     let userTeamInfo = await getUserWithTeam(user.id);
-    console.log('User with team:', userTeamInfo);
     
     // If user doesn't have a team, create one
     if (!userTeamInfo?.teamId) {
-      console.warn('User has no team association!');
-      
       // Let's automatically create a team for this user if they don't have one
       try {
-        console.log('Creating a default team for user...');
         const [newTeam] = await db
           .insert(teams)
           .values({
@@ -66,8 +56,6 @@ export const createClient = validatedActionWithUser(
             updatedAt: new Date(),
           })
           .returning();
-          
-        console.log('Created team:', newTeam);
         
         // Add user to the team
         await db
@@ -95,11 +83,6 @@ export const createClient = validatedActionWithUser(
     try {
       const teamId = userTeamInfo.teamId;
       
-      console.log('Creating client with data:', {
-        ...data,
-        teamId,
-      });
-      
       // Use the audit trail utility for creation
       const newClient = await createWithAudit(
         clients,
@@ -108,8 +91,6 @@ export const createClient = validatedActionWithUser(
         teamId,
         'client'
       );
-        
-      console.log('Client created successfully:', newClient);
 
       return { 
         success: 'Client created successfully',
@@ -230,12 +211,9 @@ export async function getClientsForTeam(_formData?: FormData) {
   if (!user) return { error: 'User not authenticated' };
 
   let userTeamInfo = await getUserWithTeam(user.id);
-  console.log('Get clients - user team info:', userTeamInfo);
   
   // If user doesn't have a team, create one
   if (!userTeamInfo?.teamId) {
-    console.log('User has no team - creating one for clients listing');
-    
     try {
       // Create a default team
       const [newTeam] = await db
@@ -246,8 +224,6 @@ export async function getClientsForTeam(_formData?: FormData) {
           updatedAt: new Date(),
         })
         .returning();
-        
-      console.log('Created team for client list:', newTeam);
       
       // Add user to the team
       await db
@@ -269,15 +245,12 @@ export async function getClientsForTeam(_formData?: FormData) {
 
   try {
     const teamId = userTeamInfo.teamId;
-    console.log('Fetching clients for teamId:', teamId);
     
     const clientList = await db.query.clients.findMany({
       where: (client, { and, eq: whereEq, isNull: whereIsNull }) => 
         and(whereEq(client.teamId, teamId as number), whereIsNull(client.deletedAt)),
       orderBy: (client, { desc }) => [desc(client.createdAt)]
     });
-    
-    console.log('Fetched clients:', clientList);
 
     return { clients: clientList };
   } catch (error) {
@@ -292,7 +265,6 @@ export async function getClientById(id: number, _formData?: FormData) {
   if (!user) return { error: 'User not authenticated' };
 
   let userTeamInfo = await getUserWithTeam(user.id);
-  console.log('Get client by ID - user team info:', userTeamInfo);
   
   // Skip team creation for read operations - this should already be created from other operations
   if (!userTeamInfo?.teamId) {
@@ -301,7 +273,6 @@ export async function getClientById(id: number, _formData?: FormData) {
 
   try {
     const teamId = userTeamInfo.teamId;
-    console.log(`Fetching client with ID: ${id} for team: ${teamId}`);
     
     const client = await db.query.clients.findFirst({
       where: (client, { and, eq: whereEq, isNull: whereIsNull }) => 

@@ -181,7 +181,7 @@ export default async function Dashboard() {
                         <div className="flex items-center gap-2">
                           {priorityIcons[ticketData.ticket.priority as keyof typeof priorityIcons]}
                           <Link 
-                            href={`/dashboard/tickets/${ticketData.ticket.id}`}
+                            href={`/dashboard/tickets?id=${ticketData.ticket.id}`}
                             className="text-sm font-medium text-foreground hover:text-primary"
                           >
                             {ticketData.ticket.title}
