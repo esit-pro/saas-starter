@@ -72,6 +72,13 @@ export const activityLogs = pgTable('activity_logs', {
   details: json('details'), // JSON object containing before/after values or additional context
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   ipAddress: varchar('ip_address', { length: 45 }),
+  // New audit trail fields
+  actionCategory: varchar('action_category', { length: 50 }), // Category of action (auth, data, admin, etc.)
+  status: varchar('status', { length: 20 }), // Success, failure, etc.
+  serverAction: varchar('server_action', { length: 100 }), // Name of the server action called
+  durationMs: integer('duration_ms'), // How long the operation took in milliseconds
+  userAgent: text('user_agent'), // Browser/client information
+  route: varchar('route', { length: 255 }), // Page/route where action was performed
 });
 
 export const invitations = pgTable('invitations', {
@@ -373,6 +380,8 @@ export enum ActivityType {
   
   // Comment events
   COMMENT_ADDED = 'COMMENT_ADDED',
+  COMMENT_UPDATED = 'COMMENT_UPDATED',
+  COMMENT_DELETED = 'COMMENT_DELETED',
   
   // Time tracking events
   TIME_ENTRY_CREATED = 'TIME_ENTRY_CREATED',
@@ -400,7 +409,19 @@ export enum ActivityType {
   INVOICE_SENT = 'INVOICE_SENT',
   INVOICE_PAID = 'INVOICE_PAID',
   INVOICE_VOIDED = 'INVOICE_VOIDED',
-  INVOICE_OVERDUE = 'INVOICE_OVERDUE'
+  INVOICE_DELETED = 'INVOICE_DELETED',
+  
+  // Security events
+  LOGIN_FAILED = 'LOGIN_FAILED',
+  PASSWORD_RESET_REQUESTED = 'PASSWORD_RESET_REQUESTED',
+  PASSWORD_RESET_COMPLETED = 'PASSWORD_RESET_COMPLETED',
+  TWO_FACTOR_ENABLED = 'TWO_FACTOR_ENABLED',
+  TWO_FACTOR_DISABLED = 'TWO_FACTOR_DISABLED',
+  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
+  
+  // Server action events
+  SERVER_ACTION_EXECUTED = 'SERVER_ACTION_EXECUTED',
+  SERVER_ACTION_FAILED = 'SERVER_ACTION_FAILED',
 }
 
 // Invoice status types
