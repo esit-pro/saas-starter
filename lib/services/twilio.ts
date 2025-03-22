@@ -141,17 +141,17 @@ function normalizePhoneNumber(phoneNumber: string): string {
   // Remove any non-digit characters
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
-  // Make sure it has proper international format
+  // Make sure it has proper format, but without + prefix
   if (digitsOnly.length === 10) {
-    // US number without country code, add +1
-    return `+1${digitsOnly}`;
-  } else if (digitsOnly.length > 10 && !phoneNumber.startsWith('+')) {
-    // Add + prefix if it doesn't have one
-    return `+${digitsOnly}`;
+    // US number without country code, add 1
+    return `1${digitsOnly}`;
+  } else if (digitsOnly.length > 10) {
+    // Just return digits for international numbers
+    return digitsOnly;
   }
   
-  // Return original format if it already has + or other cases
-  return phoneNumber;
+  // Return digits only in all cases
+  return digitsOnly;
 }
 
 // Function to send verification code via SMS
@@ -187,8 +187,8 @@ export async function sendVerificationSMS(
   try {
     const message = await client.messages.create({
       body: `Your verification code is: ${code}`,
-      from: twilioPhoneNumber,
-      to: normalizedPhone,
+      from: twilioPhoneNumber, // Keep the + for the from number
+      to: normalizedPhone,     // Now without + prefix
     });
 
     console.log(`Verification code sent to ${normalizedPhone}, SID: ${message.sid}`);
@@ -256,8 +256,8 @@ export async function send2FACode(
       try {
         const message = await client.messages.create({
           body: `Your login verification code is: ${code}. It will expire in 10 minutes.`,
-          from: twilioPhoneNumber,
-          to: normalizedPhone,
+          from: twilioPhoneNumber, // Keep the + for the from number as required by Twilio
+          to: normalizedPhone,     // This will now be digits only without +
         });
 
         console.log(`2FA code sent to ${normalizedPhone}, SID: ${message.sid}`);
