@@ -43,6 +43,8 @@ export function UserAuthForm({
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [twoFactorError, setTwoFactorError] = useState("");
+  const [resendingCode, setResendingCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
 
   // Handle 2FA verification
@@ -80,6 +82,49 @@ export function UserAuthForm({
       console.error("2FA verification error:", error);
     } finally {
       setVerifyingCode(false);
+    }
+  };
+
+  // Handle 2FA code resend
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    
+    setResendingCode(true);
+    setTwoFactorError("");
+    
+    try {
+      const response = await fetch('/api/2fa/resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: state.email,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Start cooldown timer (60 seconds)
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setTwoFactorError(data.error || "Failed to resend code");
+      }
+    } catch (error) {
+      setTwoFactorError("Failed to resend code. Please try again.");
+      console.error("Code resend error:", error);
+    } finally {
+      setResendingCode(false);
     }
   };
 
@@ -153,6 +198,25 @@ export function UserAuthForm({
               </>
             ) : (
               'Verify Code'
+            )}
+          </Button>
+          
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={handleResendCode}
+            disabled={resendingCode || resendCooldown > 0} 
+            className="w-full"
+          >
+            {resendingCode ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : resendCooldown > 0 ? (
+              `Resend Code (${resendCooldown}s)`
+            ) : (
+              'Resend Code'
             )}
           </Button>
         </div>

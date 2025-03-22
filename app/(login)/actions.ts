@@ -28,6 +28,7 @@ import {
   validatedActionWithUser,
 } from '@/lib/auth/middleware';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
+import { canGenerateCode } from '@/lib/services/cleanup';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -97,6 +98,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   // Check if 2FA is enabled
   if (foundUser.twoFactorEnabled) {
+    // Check rate limiting before generating a new code
+    const canGenerate = await canGenerateCode(foundUser.id, '2fa_login');
+    if (!canGenerate) {
+      return {
+        error: 'Too many code requests. Please try again later.',
+        email,
+      };
+    }
+    
     // Generate and send 2FA code
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
