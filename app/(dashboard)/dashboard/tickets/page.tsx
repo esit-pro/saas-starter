@@ -310,36 +310,13 @@ function TicketDetailPane({
             <div className="flex-1">
               <div className="flex items-center justify-between max-w-md">
                 {isEditing ? (
-                  <Input
-                    value={displayData.title || ''}
-                    onChange={(e) => handleChange('title', e.target.value)}
-                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
-                  />
-                ) : (
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.title}</h2>
-                )}
-                
-                <div className="flex items-center">
-                  {isEditing ? (
-                    <select
-                      value={displayData.status}
-                      onChange={(e) => handleChange('status', e.target.value)}
-                      className="px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border"
-                    >
-                      <option value="open">Open</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="on-hold">On Hold</option>
-                      <option value="completed">Completed</option>
-                      <option value="closed">Closed</option>
-                    </select>
-                  ) : (
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[displayData.status]}`}>
-                      {displayData.status}
-                    </span>
-                  )}
-                  
-                  {isEditing ? (
-                    <div className="flex gap-2 ml-3">
+                  <div className="flex flex-col gap-2 w-full max-w-md">
+                    <Input
+                      value={displayData.title || ''}
+                      onChange={(e) => handleChange('title', e.target.value)}
+                      className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                    />
+                    <div className="flex gap-2 justify-end">
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -366,7 +343,31 @@ function TicketDetailPane({
                         )}
                       </Button>
                     </div>
+                  </div>
+                ) : (
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.title}</h2>
+                )}
+                
+                <div className="flex items-center">
+                  {isEditing ? (
+                    <select
+                      value={displayData.status}
+                      onChange={(e) => handleChange('status', e.target.value)}
+                      className="px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border"
+                    >
+                      <option value="open">Open</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="on-hold">On Hold</option>
+                      <option value="completed">Completed</option>
+                      <option value="closed">Closed</option>
+                    </select>
                   ) : (
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium capitalize ${statusColors[displayData.status]}`}>
+                      {displayData.status}
+                    </span>
+                  )}
+                  
+                  {!isEditing && (
                     <Button 
                       size="sm" 
                       variant="outline" 

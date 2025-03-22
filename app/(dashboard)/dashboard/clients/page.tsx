@@ -275,11 +275,40 @@ function ClientDetailPane({
             </div>
             <div>
               {isEditing ? (
-                <Input
-                  value={displayData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
-                />
+                <div className="flex flex-col gap-2 max-w-md">
+                  <Input
+                    value={displayData.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedData({});
+                      }}
+                      disabled={isSaving}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleSave}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save'
+                      )}
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.name}</h2>
               )}
@@ -317,35 +346,7 @@ function ClientDetailPane({
             </div>
           </div>
           <div>
-            {isEditing ? (
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditedData({});
-                  }}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </div>
-            ) : (
+            {!isEditing && (
               <Button 
                 size="sm" 
                 variant="outline" 

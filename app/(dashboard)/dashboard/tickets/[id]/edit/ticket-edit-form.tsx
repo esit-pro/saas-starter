@@ -182,7 +182,7 @@ export function TicketEditForm({ ticketId }: TicketEditFormProps) {
       
       <Card className="shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="grid gap-2">
               <Label htmlFor="title">Ticket Title <span className="text-red-500">*</span></Label>
               <Input
@@ -194,93 +194,95 @@ export function TicketEditForm({ ticketId }: TicketEditFormProps) {
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="client">Client <span className="text-red-500">*</span></Label>
-              <ClientCombobox
-                clients={clients}
-                selectedClientId={clientId}
-                onClientChange={setClientId}
-                disabled={isSaving}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
-                <option value="on-hold">On Hold</option>
-                <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="priority">Priority <span className="text-red-500">*</span></Label>
-              <select
-                id="priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="assignedTo">Assigned To</Label>
-              <select
-                id="assignedTo"
-                value={assignedTo || ''}
-                onChange={(e) => setAssignedTo(e.target.value ? parseInt(e.target.value) : null)}
-                className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">-- Unassigned --</option>
-                {teamMembers.map(member => (
-                  <option key={member.id} value={member.id}>
-                    {member.name || member.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g., Hardware, Software, Network"
-              />
-            </div>
-            
-            <div className="grid gap-2 md:col-span-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detailed description of the issue"
-                rows={5}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="client">Client <span className="text-red-500">*</span></Label>
+                <ClientCombobox
+                  clients={clients}
+                  selectedClientId={clientId}
+                  onClientChange={setClientId}
+                  disabled={isSaving}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
+                <select
+                  id="status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="open">Open</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="on-hold">On Hold</option>
+                  <option value="completed">Completed</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Priority <span className="text-red-500">*</span></Label>
+                <select
+                  id="priority"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as any)}
+                  className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="assignedTo">Assigned To</Label>
+                <select
+                  id="assignedTo"
+                  value={assignedTo || ''}
+                  onChange={(e) => setAssignedTo(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full h-9 rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">-- Unassigned --</option>
+                  {teamMembers.map(member => (
+                    <option key={member.id} value={member.id}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Input
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g., Hardware, Software, Network"
+                />
+              </div>
+              
+              <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Detailed description of the issue"
+                  rows={5}
+                />
+              </div>
             </div>
           </div>
           
@@ -305,7 +307,7 @@ export function TicketEditForm({ ticketId }: TicketEditFormProps) {
               ) : (
                 <>
                   <SaveIcon className="mr-2 h-4 w-4" />
-                  Save Changes
+                  Save
                 </>
               )}
             </Button>

@@ -143,7 +143,7 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
       
       <Card className="shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="grid gap-2">
               <Label htmlFor="name">Company Name <span className="text-red-500">*</span></Label>
               <Input
@@ -155,37 +155,48 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="contactName">Contact Person <span className="text-red-500">*</span></Label>
-              <Input
-                id="contactName"
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="John Doe"
-                required
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="contact@example.com"
-                required
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(555) 123-4567"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="contactName">Contact Person <span className="text-red-500">*</span></Label>
+                <Input
+                  id="contactName"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="contact@example.com"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="isActive" 
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+                <Label htmlFor="isActive" className="font-normal">Active Client</Label>
+              </div>
             </div>
             
             <div className="grid gap-2 md:col-span-2">
@@ -208,15 +219,6 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
                 placeholder="Any additional information about this client..."
                 rows={3}
               />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="isActive" 
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-              <Label htmlFor="isActive" className="font-normal">Active Client</Label>
             </div>
           </div>
           
@@ -241,7 +243,7 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
               ) : (
                 <>
                   <SaveIcon className="mr-2 h-4 w-4" />
-                  Save Changes
+                  Save
                 </>
               )}
             </Button>
