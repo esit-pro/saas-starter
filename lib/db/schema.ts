@@ -390,5 +390,149 @@ export enum ActivityType {
   // Subscription events
   SUBSCRIPTION_CREATED = 'SUBSCRIPTION_CREATED',
   SUBSCRIPTION_UPDATED = 'SUBSCRIPTION_UPDATED',
-  SUBSCRIPTION_CANCELLED = 'SUBSCRIPTION_CANCELLED'
+  SUBSCRIPTION_CANCELLED = 'SUBSCRIPTION_CANCELLED',
+  
+  // Invoice events
+  INVOICE_CREATED = 'INVOICE_CREATED',
+  INVOICE_UPDATED = 'INVOICE_UPDATED',
+  INVOICE_SENT = 'INVOICE_SENT',
+  INVOICE_PAID = 'INVOICE_PAID',
+  INVOICE_VOIDED = 'INVOICE_VOIDED',
+  INVOICE_OVERDUE = 'INVOICE_OVERDUE'
 }
+
+// Invoice status types
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'voided';
+
+// Invoices table
+export const invoices = pgTable('invoices', {
+  id: serial('id').primaryKey(),
+  invoiceNumber: varchar('invoice_number', { length: 50 }).notNull(),
+  clientId: integer('client_id').notNull().references(() => clients.id),
+  subtotal: decimal('subtotal', { precision: 10, scale: 2 }).notNull(),
+  tax: decimal('tax', { precision: 10, scale: 2 }).notNull().default('0'),
+  total: decimal('total', { precision: 10, scale: 2 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  issueDate: timestamp('issue_date').notNull(),
+  dueDate: timestamp('due_date').notNull(),
+  notes: text('notes'),
+  terms: text('terms'),
+  paidDate: timestamp('paid_date'),
+  paidAmount: decimal('paid_amount', { precision: 10, scale: 2 }),
+  paidMethod: varchar('paid_method', { length: 50 }),
+  sentAt: timestamp('sent_at'),
+  voidedAt: timestamp('voided_at'),
+  ...auditFields
+});
+
+// Invoice items table for line items on invoices
+export const invoiceItems = pgTable('invoice_items', {
+  id: serial('id').primaryKey(),
+  invoiceId: integer('invoice_id').notNull().references(() => invoices.id),
+  description: text('description').notNull(),
+  quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  type: varchar('type', { length: 20 }).notNull(), // 'time', 'expense', 'product', 'service'
+  timeEntryId: integer('time_entry_id').references(() => timeEntries.id),
+  expenseId: integer('expense_id').references(() => expenses.id),
+  ticketId: integer('ticket_id').references(() => serviceTickets.id),
+  taxable: boolean('taxable').notNull().default(false),
+  ...auditFields
+});
+
+// Table to track which service tickets are included in which invoices
+export const invoiceTickets = pgTable('invoice_tickets', {
+  id: serial('id').primaryKey(),
+  invoiceId: integer('invoice_id').notNull().references(() => invoices.id),
+  ticketId: integer('ticket_id').notNull().references(() => serviceTickets.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// Add relations for invoices
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [invoices.clientId],
+    references: [clients.id]
+  }),
+  items: many(invoiceItems),
+  tickets: many(invoiceTickets),
+  createdByUser: one(users, {
+    fields: [invoices.createdBy],
+    references: [users.id]
+  }),
+  team: one(teams, {
+    fields: [invoices.teamId],
+    references: [teams.id]
+  })
+}));
+
+// Add relations for invoice items
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id]
+  }),
+  timeEntry: one(timeEntries, {
+    fields: [invoiceItems.timeEntryId],
+    references: [timeEntries.id]
+  }),
+  expense: one(expenses, {
+    fields: [invoiceItems.expenseId],
+    references: [expenses.id]
+  }),
+  ticket: one(serviceTickets, {
+    fields: [invoiceItems.ticketId],
+    references: [serviceTickets.id]
+  })
+}));
+
+// Add relations for invoice tickets
+export const invoiceTicketsRelations = relations(invoiceTickets, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceTickets.invoiceId],
+    references: [invoices.id]
+  }),
+  ticket: one(serviceTickets, {
+    fields: [invoiceTickets.ticketId],
+    references: [serviceTickets.id]
+  })
+}));
+
+// Update client relations to include invoices
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [clients.teamId],
+    references: [teams.id],
+  }),
+  serviceTickets: many(serviceTickets),
+  timeEntries: many(timeEntries),
+  expenses: many(expenses),
+  invoices: many(invoices)
+}));
+
+// Update service tickets relations to include invoices
+export const serviceTicketsRelations = relations(serviceTickets, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [serviceTickets.teamId],
+    references: [teams.id],
+  }),
+  client: one(clients, {
+    fields: [serviceTickets.clientId],
+    references: [clients.id],
+  }),
+  assignedUser: one(users, {
+    fields: [serviceTickets.assignedTo],
+    references: [users.id],
+    relationName: 'assignedTickets'
+  }),
+  createdByUser: one(users, {
+    fields: [serviceTickets.createdBy],
+    references: [users.id],
+    relationName: 'createdTickets'
+  }),
+  comments: many(ticketComments),
+  timeEntries: many(timeEntries),
+  expenses: many(expenses),
+  invoiceTickets: many(invoiceTickets)
+}));
