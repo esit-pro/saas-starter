@@ -16,6 +16,8 @@ import {
   File as FileIcon,
   X,
   Loader2,
+  ClipboardList,
+  Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '../../components/data-table';
@@ -211,6 +213,7 @@ function ClientDetailPane({
   const [isEditing, setIsEditing] = useState(initialEditMode);
   const [editedData, setEditedData] = useState<Partial<Client>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'invoices'>('details');
   
   useEffect(() => {
     // Reset state when client changes
@@ -266,59 +269,57 @@ function ClientDetailPane({
 
   return (
     <div className="h-full overflow-auto">
-      <div className="p-6 flex flex-col gap-6">
+      <div className="p-6 flex flex-col gap-8">
         {/* Client header with edit button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
+            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-6">
               <Users className="h-8 w-8" />
             </div>
-            <div>
-              {isEditing ? (
-                <div className="flex flex-col gap-2 max-w-md">
-                  <Input
-                    value={displayData.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
-                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditedData({});
-                      }}
-                      disabled={isSaving}
-                      className="h-8"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      size="sm"
-                      variant="primary" 
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="h-8"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save'
-                      )}
-                    </Button>
+            <div className="flex-1">
+              <div className="flex items-center justify-between max-w-xl">
+                {isEditing ? (
+                  <div className="flex flex-col gap-3 w-full max-w-xl">
+                    <Input
+                      value={displayData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      className="text-2xl font-bold h-auto py-2 px-3 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                    />
+                    <div className="flex gap-3 justify-end mt-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedData({});
+                        }}
+                        disabled={isSaving}
+                        className="h-8"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm"
+                        variant="primary" 
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="h-8"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save'
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.name}</h2>
-              )}
-              <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center gap-4 mt-1">
-                <div className="flex items-center">
-                  <span>Client #{client.id}</span>
-                </div>
+                ) : (
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.name}</h2>
+                )}
+                
                 <div className="flex items-center">
                   {isEditing ? (
                     <div className="flex items-center gap-2">
@@ -330,17 +331,32 @@ function ClientDetailPane({
                     </div>
                   ) : (
                     displayData.isActive ? (
-                      <span className="flex items-center text-green-700 dark:text-green-500">
-                        <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                         Active
                       </span>
                     ) : (
-                      <span className="flex items-center text-red-700 dark:text-red-500">
-                        <XCircle className="h-4 w-4 mr-1" />
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                         Inactive
                       </span>
                     )
                   )}
+                  
+                  {!isEditing && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center ml-3"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="text-sm text-gray-500 dark:text-muted-foreground flex items-center flex-wrap gap-4 mt-1">
+                <div className="flex items-center">
+                  <span>Client #{client.id}</span>
                 </div>
                 <div className="flex items-center">
                   <span>Created {formatDistanceToNow(new Date(client.createdAt), { addSuffix: true })}</span>
@@ -348,156 +364,177 @@ function ClientDetailPane({
               </div>
             </div>
           </div>
-          <div>
-            {!isEditing && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setIsEditing(true)}
-                className="flex items-center"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* Contact information */}
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-4 ${isEditing ? 'border-2 border-blue-200 dark:border-blue-900/40 rounded-lg p-2' : ''}`}>
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
-              Contact Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <div className="w-8">
-                  <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Email</div>
-                  {isEditing ? (
-                    <Input
-                      type="email"
-                      value={displayData.email || ''}
-                      onChange={(e) => handleChange('email', e.target.value)}
-                      className="h-8 border-blue-300 dark:border-blue-700"
-                    />
-                  ) : (
-                    <div className="font-medium text-gray-900 dark:text-foreground">
-                      <a href={`mailto:${displayData.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
-                        {displayData.email}
-                      </a>
+        {/* Client details cards */}
+        {activeTab === 'details' && (
+          <>
+            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${isEditing ? 'rounded-lg p-4 bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+              <div className={`border dark:border-border rounded-lg p-5`}>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+                  Contact Information
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Email</div>
+                      {isEditing ? (
+                        <Input
+                          type="email"
+                          value={displayData.email || ''}
+                          onChange={(e) => handleChange('email', e.target.value)}
+                          className="h-8 border-blue-300 dark:border-blue-700"
+                        />
+                      ) : (
+                        <div className="font-medium text-gray-900 dark:text-foreground">
+                          <a href={`mailto:${displayData.email}`} className="text-blue-600 dark:text-blue-500 hover:underline">
+                            {displayData.email}
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center">
-                <div className="w-8">
-                  <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Phone</div>
-                  {isEditing ? (
-                    <Input
-                      value={displayData.phone || ''}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      placeholder="Enter phone number"
-                      className="h-8 border-blue-300 dark:border-blue-700"
-                    />
-                  ) : (
-                    <div className="font-medium text-gray-900 dark:text-foreground">
-                      {displayData.phone || 'Not provided'}
-                    </div>
-                  )}
+              
+              <div className={`border dark:border-border rounded-lg p-5`}>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Contact Person</h3>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
+                  <div className="flex-1">
+                    {isEditing ? (
+                      <Input
+                        value={displayData.contactName || ''}
+                        onChange={(e) => handleChange('contactName', e.target.value)}
+                        className="h-8 border-blue-300 dark:border-blue-700 mt-1"
+                      />
+                    ) : (
+                      <span className="font-medium text-gray-900 dark:text-foreground">
+                        {displayData.contactName || "No contact person"}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center">
-                <div className="w-8">
-                  <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Contact Person</div>
-                  {isEditing ? (
-                    <Input
-                      value={displayData.contactName || ''}
-                      onChange={(e) => handleChange('contactName', e.target.value)}
-                      className="h-8 border-blue-300 dark:border-blue-700"
-                    />
-                  ) : (
-                    <div className="font-medium text-gray-900 dark:text-foreground">{displayData.contactName}</div>
-                  )}
+              
+              <div className={`border dark:border-border rounded-lg p-5`}>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Phone</h3>
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
+                  <div className="flex-1">
+                    {isEditing ? (
+                      <Input
+                        value={displayData.phone || ''}
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                        placeholder="Enter phone number"
+                        className="h-8 border-blue-300 dark:border-blue-700 mt-1"
+                      />
+                    ) : (
+                      <span className="font-medium text-gray-900 dark:text-foreground">
+                        {displayData.phone || "No phone number"}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Address Section */}
+            <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+                Address
+              </h3>
+              {isEditing ? (
+                <Textarea
+                  value={displayData.address || ''}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  placeholder="Enter the client's address"
+                  className="min-h-[80px] border-blue-300 dark:border-blue-700 mt-2"
+                />
+              ) : (
+                <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
+                  {displayData.address || 'No address provided.'}
+                </div>
+              )}
+            </div>
+
+            {/* Notes Section */}
+            <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+                Notes
+              </h3>
+              {isEditing ? (
+                <Textarea
+                  value={displayData.notes || ''}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  placeholder="Enter notes about this client"
+                  className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-2"
+                />
+              ) : (
+                <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
+                  {displayData.notes || 'No notes provided.'}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Tab navigation */}
+        <div className="border-b dark:border-border">
+          <div className="flex space-x-6">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`py-2 border-b-2 font-medium text-sm ${
+                activeTab === 'details'
+                  ? 'border-primary text-primary dark:text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`py-2 border-b-2 font-medium text-sm ${
+                activeTab === 'activity'
+                  ? 'border-primary text-primary dark:text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Activity
+            </button>
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`py-2 border-b-2 font-medium text-sm ${
+                activeTab === 'invoices'
+                  ? 'border-primary text-primary dark:text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Invoices
+            </button>
           </div>
+        </div>
+
+        {/* Tab content */}
+        <div className="min-h-[400px]">
+          {activeTab === 'activity' && (
+            <div className="flex items-center justify-center h-64 border rounded-lg dark:border-border">
+              <div className="text-center">
+                <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                <h3 className="text-lg font-medium text-gray-500 dark:text-muted-foreground">No activity recorded</h3>
+                <p className="mt-2 text-gray-500 dark:text-muted-foreground">Client activity will appear here</p>
+              </div>
+            </div>
+          )}
           
-          <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
-              Account Details
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <div className="w-8">
-                  <CheckCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Status</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">
-                    {displayData.isActive ? "Active" : "Inactive"}
-                  </div>
-                </div>
+          {activeTab === 'invoices' && (
+            <div className="flex items-center justify-center h-64 border rounded-lg dark:border-border">
+              <div className="text-center">
+                <Receipt className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                <h3 className="text-lg font-medium text-gray-500 dark:text-muted-foreground">No invoices found</h3>
+                <p className="mt-2 text-gray-500 dark:text-muted-foreground">Client invoices will appear here</p>
               </div>
-              <div className="flex items-center">
-                <div className="w-8">
-                  <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Client Since</div>
-                  <div className="font-medium text-gray-900 dark:text-foreground">
-                    {new Date(client.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="w-8">
-                  <FileIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Address</div>
-                  {isEditing ? (
-                    <Textarea
-                      value={displayData.address || ''}
-                      onChange={(e) => handleChange('address', e.target.value)}
-                      placeholder="Enter address"
-                      className="min-h-[60px] border-blue-300 dark:border-blue-700 mt-1"
-                    />
-                  ) : (
-                    <div className="font-medium text-gray-900 dark:text-foreground">
-                      {displayData.address || 'Not provided'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notes Section */}
-        <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
-          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
-            Notes
-          </h3>
-          {isEditing ? (
-            <Textarea
-              value={displayData.notes || ''}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Enter notes about this client"
-              className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-1"
-            />
-          ) : (
-            <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
-              {displayData.notes || 'No notes provided.'}
             </div>
           )}
         </div>
