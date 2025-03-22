@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
   // Temporarily redirect sign-up requests to sign-in with a message
   if (pathname.startsWith('/sign-up')) {
     const signInUrl = new URL('/sign-in', request.url);
-    signInUrl.searchParams.set('message', 'Registration is temporarily disabled for private testing');
+    signInUrl.searchParams.set('message', 'Registration is temporarily disabled while we enhance the platform');
     return NextResponse.redirect(signInUrl);
   }
   
