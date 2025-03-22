@@ -12,6 +12,7 @@ let configWarningLogged = false;
 // Improved Twilio client initialization
 let client: any = null;
 let twilioInitialized = false;
+let normalizedTwilioPhoneNumber: string | null = null;
 
 // Track generated codes
 const devModeCodes: Record<string, string> = {};
@@ -76,11 +77,13 @@ function initTwilio() {
     return isDevelopment;
   }
   
-  if (!twilioPhoneNumber) {
+  if (twilioPhoneNumber) {
+    normalizedTwilioPhoneNumber = twilioPhoneNumber.startsWith('+') 
+      ? twilioPhoneNumber 
+      : `+${twilioPhoneNumber.replace(/\D/g, '')}`;
+    console.log(`Using Twilio phone number: ${normalizedTwilioPhoneNumber}`);
+  } else {
     console.error('Missing TWILIO_PHONE_NUMBER in environment variables');
-    configWarningLogged = true;
-    configStatus.configWarningLogged = true;
-    return isDevelopment;
   }
   
   try {
@@ -141,17 +144,17 @@ function normalizePhoneNumber(phoneNumber: string): string {
   // Remove any non-digit characters
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
-  // Make sure it has proper format, but without + prefix
+  // Make sure it has proper format WITH + prefix
   if (digitsOnly.length === 10) {
-    // US number without country code, add 1
-    return `1${digitsOnly}`;
+    // US number without country code, add +1
+    return `+1${digitsOnly}`;
   } else if (digitsOnly.length > 10) {
-    // Just return digits for international numbers
-    return digitsOnly;
+    // International numbers need + prefix
+    return `+${digitsOnly}`;
   }
   
-  // Return digits only in all cases
-  return digitsOnly;
+  // Return with + prefix in all cases
+  return `+${digitsOnly}`;
 }
 
 // Function to send verification code via SMS
@@ -169,7 +172,7 @@ export async function sendVerificationSMS(
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
   
   // Development fallback - just log the code
-  if (isDevelopment && (!client || !twilioPhoneNumber)) {
+  if (isDevelopment && (!client || (!twilioPhoneNumber && !normalizedTwilioPhoneNumber))) {
     console.log(`\n==== DEVELOPMENT MODE: SMS CODE ====`);
     console.log(`📱 Verification code for ${normalizedPhone}: ${code}`);
     console.log(`====================================\n`);
@@ -179,16 +182,16 @@ export async function sendVerificationSMS(
     return true;
   }
 
-  if (!client || !twilioPhoneNumber) {
-    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
+  if (!client || (!twilioPhoneNumber && !normalizedTwilioPhoneNumber)) {
+    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber, 'normalized phone:', !!normalizedTwilioPhoneNumber);
     return false;
   }
 
   try {
     const message = await client.messages.create({
       body: `Your verification code is: ${code}`,
-      from: twilioPhoneNumber, // Keep the + for the from number
-      to: normalizedPhone,     // Now without + prefix
+      from: normalizedTwilioPhoneNumber || twilioPhoneNumber,
+      to: normalizedPhone,     // Now WITH + prefix
     });
 
     console.log(`Verification code sent to ${normalizedPhone}, SID: ${message.sid}`);
@@ -225,7 +228,7 @@ export async function send2FACode(
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
   
   // Development fallback - just log the code
-  if (isDevelopment && (!client || !twilioPhoneNumber)) {
+  if (isDevelopment && (!client || (!twilioPhoneNumber && !normalizedTwilioPhoneNumber))) {
     console.log(`\n==== DEVELOPMENT MODE: 2FA CODE ====`);
     console.log(`🔐 Login verification code for ${normalizedPhone}: ${code}`);
     console.log(`====================================\n`);
@@ -235,13 +238,15 @@ export async function send2FACode(
     return true;
   }
 
-  if (!client || !twilioPhoneNumber) {
-    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
+  if (!client || (!twilioPhoneNumber && !normalizedTwilioPhoneNumber)) {
+    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber, 'normalized phone:', !!normalizedTwilioPhoneNumber);
     return false;
   }
   
   // Validate Twilio phone number format
-  if (!twilioPhoneNumber.startsWith('+')) {
+  if (normalizedTwilioPhoneNumber) {
+    // Already normalized, continue
+  } else if (twilioPhoneNumber && !twilioPhoneNumber.startsWith('+')) {
     console.error('Twilio phone number must start with +: ', twilioPhoneNumber);
     return false;
   }
@@ -255,9 +260,9 @@ export async function send2FACode(
     while (retries <= maxRetries) {
       try {
         const message = await client.messages.create({
-          body: `Your login verification code is: ${code}. It will expire in 10 minutes.`,
-          from: twilioPhoneNumber, // Keep the + for the from number as required by Twilio
-          to: normalizedPhone,     // This will now be digits only without +
+          body: `Your two-factor authentication code is: ${code}`,
+          from: normalizedTwilioPhoneNumber || twilioPhoneNumber,
+          to: normalizedPhone,     // Now WITH + prefix
         });
 
         console.log(`2FA code sent to ${normalizedPhone}, SID: ${message.sid}`);
