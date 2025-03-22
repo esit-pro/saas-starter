@@ -675,31 +675,22 @@ export default function ClientsPage() {
         <div className="flex justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
+              <Button 
+                variant="ghost" 
+                className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
+                data-action="menu"
+              >
                 <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem 
-                className="cursor-pointer flex items-center"
-                onClick={() => {
-                  const clientId = row.original.id;
-                  // Toggle selection - if already selected, deselect; otherwise select
-                  setSelectedClientId(prev => prev === clientId ? null : clientId);
-                }}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                <span>View details</span>
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-[160px]">
               <DropdownMenuItem asChild>
                 <Link href={`/dashboard/clients/${row.original.id}/edit`} className="cursor-pointer flex items-center">
                   <Pencil className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
                 onClick={() => {
@@ -864,33 +855,45 @@ export default function ClientsPage() {
       {tableView}
       <AnimatePresence>
         {selectedClientId && (
-          <motion.div 
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
-            style={{ zIndex: 10 }}
-          >
-            <div className="flex justify-between items-center p-4 border-b dark:border-border">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Client Details</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setSelectedClientId(null)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </div>
-            <div className="p-4">
-              <ClientDetailPane 
-                client={selectedClient} 
-                onUpdateClient={handleUpdateClient}
-              />
-            </div>
-          </motion.div>
+          <>
+            {/* Add backdrop overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-10"
+              onClick={() => setSelectedClientId(null)} // Close detail pane when backdrop is clicked
+            />
+            
+            <motion.div 
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
+              style={{ zIndex: 20 }} // Higher z-index than the backdrop
+            >
+              <div className="flex justify-between items-center p-4 border-b dark:border-border">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Client Details</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedClientId(null)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
+              <div className="p-4">
+                <ClientDetailPane 
+                  client={selectedClient} 
+                  onUpdateClient={handleUpdateClient}
+                />
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

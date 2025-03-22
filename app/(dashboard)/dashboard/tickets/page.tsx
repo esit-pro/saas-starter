@@ -1817,43 +1817,55 @@ export default function TicketsPage() {
       {updatedTicketsView}
       <AnimatePresence>
         {selectedTicket && (
-          <motion.div 
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
-            style={{ zIndex: 10 }}
-          >
-            <div className="flex justify-between items-center p-4 border-b dark:border-border">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Ticket Details</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setSelectedTicket(null)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </div>
-            <div className="p-4">
-              <TicketDetailPane 
-                ticket={selectedTicket}
-                comments={comments.filter(c => c.ticketId === selectedTicket.id)}
-                timeEntries={timeEntries.filter(t => t.ticketId === selectedTicket.id)}
-                expenses={expenses.filter(e => e.ticketId === selectedTicket.id)}
-                statusHistory={statusHistory.filter(s => s.ticketId === selectedTicket.id)}
-                onLogTime={handleLogTime}
-                onAddExpense={handleAddExpense}
-                onUpdateTicket={handleUpdateTicket}
-                onDeleteTimeEntry={handleDeleteTimeEntry}
-                clients={clients}
-                teamMembers={teamMembers}
-                onCommentAdded={handleAddComment}
-              />
-            </div>
-          </motion.div>
+          <>
+            {/* Add backdrop overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-10"
+              onClick={() => setSelectedTicket(null)} // Close detail pane when backdrop is clicked
+            />
+            
+            <motion.div 
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
+              style={{ zIndex: 20 }} // Higher z-index than the backdrop
+            >
+              <div className="flex justify-between items-center p-4 border-b dark:border-border">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">Ticket Details</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedTicket(null)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
+              <div className="p-4">
+                <TicketDetailPane 
+                  ticket={selectedTicket}
+                  comments={comments.filter(c => c.ticketId === selectedTicket.id)}
+                  timeEntries={timeEntries.filter(t => t.ticketId === selectedTicket.id)}
+                  expenses={expenses.filter(e => e.ticketId === selectedTicket.id)}
+                  statusHistory={statusHistory.filter(s => s.ticketId === selectedTicket.id)}
+                  onLogTime={handleLogTime}
+                  onAddExpense={handleAddExpense}
+                  onUpdateTicket={handleUpdateTicket}
+                  onDeleteTimeEntry={handleDeleteTimeEntry}
+                  clients={clients}
+                  teamMembers={teamMembers}
+                  onCommentAdded={handleAddComment}
+                />
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

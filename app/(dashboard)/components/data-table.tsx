@@ -311,7 +311,8 @@ export function DataTable<TData extends { id: number }, TValue>({
                           style={{
                             x: swipeX,
                             position: 'relative',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            cursor: 'pointer' // Add pointer cursor to indicate clickable
                           }}
                           whileTap={{ cursor: 'grabbing' }}
                           drag="x"
@@ -319,6 +320,22 @@ export function DataTable<TData extends { id: number }, TValue>({
                           dragElastic={0.1}
                           onDragEnd={(e, info) => handleSwipeEnd(rowData.id, info)}
                           onDrag={(e, info) => handleSwipeUpdate(rowData.id, info)}
+                          onClick={(e) => {
+                            // Check if the click was on or within an action button/dropdown
+                            // This prevents row click from firing when clicking action buttons
+                            const target = e.target as HTMLElement;
+                            const isClickOnAction = 
+                              target.closest('[data-action]') || 
+                              target.closest('[role="menuitem"]') ||
+                              target.closest('[role="menu"]') ||
+                              target.closest('button');
+                            
+                            // Only trigger row click if not clicking an action element
+                            // and if onRowClick handler exists
+                            if (!isClickOnAction && onRowClick) {
+                              onRowClick(rowData);
+                            }
+                          }}
                         >
                           {row.getVisibleCells().map(cell => (
                             <td key={cell.id} className="p-4">
