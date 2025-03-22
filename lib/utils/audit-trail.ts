@@ -308,3 +308,10 @@ async function logDeleteActivity(
     }
   });
 } 
+
+export default {
+  createWithAudit,
+  updateWithAudit,
+  softDeleteWithAudit,
+  hasColumn,
+};
