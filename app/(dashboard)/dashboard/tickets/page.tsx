@@ -188,7 +188,9 @@ function TicketDetailPane({
   onDeleteTimeEntry,
   clients,
   teamMembers,
-  onCommentAdded
+  onCommentAdded,
+  isEditing,
+  setIsEditing
 }: { 
   ticket: ServiceTicket | null;
   comments: Comment[];
@@ -209,15 +211,15 @@ function TicketDetailPane({
   onUpdateTicket: (id: number, data: Partial<ServiceTicket>) => Promise<void>;
   onDeleteTimeEntry: (id: number) => Promise<void>;
   onCommentAdded: (commentData: Partial<Comment> & { content: string }) => void;
+  isEditing: boolean;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [activeTab, setActiveTab] = useState<'activity' | 'time' | 'expenses'>('activity');
-  const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ServiceTicket>>({});
   const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
     // Reset state when ticket changes
-    setIsEditing(false);
     setEditedData({});
     setIsSaving(false);
   }, [ticket?.id]);
@@ -724,6 +726,7 @@ export default function TicketsPage() {
   const [completedTickets, setCompletedTickets] = useState<ServiceTicket[]>([]);
   const [selectedTab, setSelectedTab] = useState('active');
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -732,6 +735,11 @@ export default function TicketsPage() {
   const [teamMembers, setTeamMembers] = useState<{ id: number; name: string; email: string }[]>([]);
   const searchParams = useSearchParams();
   const ticketIdFromUrl = searchParams.get('id');
+  
+  // Reset editing state when selectedTicket changes
+  useEffect(() => {
+    setIsEditing(false);
+  }, [selectedTicket]);
   
   // Fetch clients and team members
   useEffect(() => {
@@ -912,20 +920,28 @@ export default function TicketsPage() {
       <>
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem 
-          className="cursor-pointer flex items-center"
           onClick={() => {
-            // Toggle selection - if already selected, deselect; otherwise select
+            // Toggle selection - if already selected, deselect it; otherwise select it
             setSelectedTicket(prev => prev?.id === row.original.id ? null : row.original);
           }}
+          className="cursor-pointer flex items-center"
         >
           <Eye className="mr-2 h-4 w-4" />
           <span>View details</span>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Edit</span>
-          </Link>
+        <DropdownMenuItem 
+          onClick={() => {
+            // Select the ticket, open the detail panel, and activate edit mode
+            setSelectedTicket(row.original);
+            // We need to wait for selectedTicket to be set before setting edit mode
+            setTimeout(() => {
+              setIsEditing(true);
+            }, 100);
+          }}
+          className="cursor-pointer flex items-center"
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          <span>Edit</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           className="cursor-pointer flex items-center"
@@ -1422,11 +1438,19 @@ export default function TicketsPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 <span>View details</span>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/dashboard/tickets/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
-                </Link>
+              <DropdownMenuItem 
+                onClick={() => {
+                  // Select the ticket, open the detail panel, and activate edit mode
+                  setSelectedTicket(row.original);
+                  // We need to wait for selectedTicket to be set before setting edit mode
+                  setTimeout(() => {
+                    setIsEditing(true);
+                  }, 100);
+                }}
+                className="cursor-pointer flex items-center"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => {
@@ -1857,6 +1881,8 @@ export default function TicketsPage() {
                   clients={clients}
                   teamMembers={teamMembers}
                   onCommentAdded={handleAddComment}
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
                 />
               </div>
             </motion.div>

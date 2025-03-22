@@ -201,12 +201,14 @@ function CreateClientForm({ onCreateClient }: { onCreateClient: (client: Omit<Cl
 
 function ClientDetailPane({ 
   client, 
-  onUpdateClient 
+  onUpdateClient,
+  initialEditMode = false
 }: { 
   client: Client | null;
   onUpdateClient: (id: number, data: Partial<Client>) => Promise<void>;
+  initialEditMode?: boolean;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const [editedData, setEditedData] = useState<Partial<Client>>({});
   const [isSaving, setIsSaving] = useState(false);
   
@@ -506,6 +508,7 @@ export default function ClientsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [initialEditMode, setInitialEditMode] = useState(false);
 
   const fetchClients = async () => {
     setIsLoading(true);
@@ -688,11 +691,16 @@ export default function ClientsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[160px]">
-              <DropdownMenuItem asChild>
-                <Link href={`/dashboard/clients/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
-                </Link>
+              <DropdownMenuItem
+                className="cursor-pointer flex items-center"
+                onClick={() => {
+                  // Select the client and open in edit mode
+                  setSelectedClientId(row.original.id);
+                  setInitialEditMode(true);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-700 flex items-center cursor-pointer"
@@ -738,16 +746,22 @@ export default function ClientsPage() {
             const clientId = row.original.id;
             // Toggle selection - if already selected, deselect; otherwise select
             setSelectedClientId(prev => prev === clientId ? null : clientId);
+            setInitialEditMode(false);
           }}
         >
           <Eye className="mr-2 h-4 w-4" />
           <span>View details</span>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/clients/${row.original.id}/edit`} className="cursor-pointer flex items-center">
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Edit</span>
-          </Link>
+        <DropdownMenuItem
+          className="cursor-pointer flex items-center"
+          onClick={() => {
+            // Select the client and open in edit mode
+            setSelectedClientId(row.original.id);
+            setInitialEditMode(true);
+          }}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          <span>Edit</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -893,6 +907,7 @@ export default function ClientsPage() {
                 <ClientDetailPane 
                   client={selectedClient} 
                   onUpdateClient={handleUpdateClient}
+                  initialEditMode={initialEditMode}
                 />
               </div>
             </motion.div>
