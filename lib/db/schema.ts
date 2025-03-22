@@ -240,6 +240,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   serviceTickets: many(serviceTickets),
   timeEntries: many(timeEntries),
   expenses: many(expenses),
+  invoices: many(invoices)
 }));
 
 export const serviceTicketsRelations = relations(serviceTickets, ({ one, many }) => ({
@@ -264,6 +265,7 @@ export const serviceTicketsRelations = relations(serviceTickets, ({ one, many })
   comments: many(ticketComments),
   timeEntries: many(timeEntries),
   expenses: many(expenses),
+  invoiceTickets: many(invoiceTickets)
 }));
 
 export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
@@ -497,42 +499,4 @@ export const invoiceTicketsRelations = relations(invoiceTickets, ({ one }) => ({
     fields: [invoiceTickets.ticketId],
     references: [serviceTickets.id]
   })
-}));
-
-// Update client relations to include invoices
-export const clientsRelations = relations(clients, ({ one, many }) => ({
-  team: one(teams, {
-    fields: [clients.teamId],
-    references: [teams.id],
-  }),
-  serviceTickets: many(serviceTickets),
-  timeEntries: many(timeEntries),
-  expenses: many(expenses),
-  invoices: many(invoices)
-}));
-
-// Update service tickets relations to include invoices
-export const serviceTicketsRelations = relations(serviceTickets, ({ one, many }) => ({
-  team: one(teams, {
-    fields: [serviceTickets.teamId],
-    references: [teams.id],
-  }),
-  client: one(clients, {
-    fields: [serviceTickets.clientId],
-    references: [clients.id],
-  }),
-  assignedUser: one(users, {
-    fields: [serviceTickets.assignedTo],
-    references: [users.id],
-    relationName: 'assignedTickets'
-  }),
-  createdByUser: one(users, {
-    fields: [serviceTickets.createdBy],
-    references: [users.id],
-    relationName: 'createdTickets'
-  }),
-  comments: many(ticketComments),
-  timeEntries: many(timeEntries),
-  expenses: many(expenses),
-  invoiceTickets: many(invoiceTickets)
 }));
