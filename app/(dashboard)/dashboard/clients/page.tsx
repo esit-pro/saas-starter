@@ -290,13 +290,16 @@ function ClientDetailPane({
                         setEditedData({});
                       }}
                       disabled={isSaving}
+                      className="h-8"
                     >
                       Cancel
                     </Button>
                     <Button 
-                      size="sm" 
+                      size="sm"
+                      variant="primary" 
                       onClick={handleSave}
                       disabled={isSaving}
+                      className="h-8"
                     >
                       {isSaving ? (
                         <>

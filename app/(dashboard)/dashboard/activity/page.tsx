@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable } from '../../components/data-table';
 import {
   Settings,
   LogOut,
@@ -147,98 +147,134 @@ export default async function ActivityPage() {
     // Just continue with empty logs array
   }
 
+  // Define columns for DataTable
+  const columns = [
+    {
+      accessorKey: 'action',
+      header: 'Action',
+      cell: ({ row }: any) => {
+        const log = row.original;
+        const Icon = iconMap[log.action as ActivityType] || Settings;
+        const formattedAction = formatAction(log.action as ActivityType);
+
+        // Extract additional information when available
+        let entityInfo = '';
+        if (log.entityType && log.entityId) {
+          entityInfo = log.entityName 
+            ? ` - ${log.entityName}`
+            : ` - ${log.entityType} #${log.entityId}`;
+        }
+
+        // Extract meaningful details from the details JSON
+        let detailsInfo = '';
+        if (log.details) {
+          const details = log.details as any;
+          if (details.created) {
+            const name = details.created.name || details.created.title;
+            if (name) {
+              detailsInfo = `: "${name}"`;
+            }
+          } else if (details.deleted) {
+            const name = details.deleted.name || details.deleted.title;
+            if (name) {
+              detailsInfo = `: "${name}"`;
+            }
+          } else if (details.before && details.after) {
+            // Show what changed in updates
+            const changes = [];
+            for (const key in details.after) {
+              if (details.before[key] !== details.after[key] && 
+                  key !== 'updatedAt' && key !== 'updatedBy') {
+                changes.push(key);
+              }
+            }
+            if (changes.length > 0) {
+              detailsInfo = `: changed ${changes.join(', ')}`;
+            }
+          }
+        }
+
+        return (
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">
+                {formattedAction}{entityInfo}{detailsInfo}
+                {log.ipAddress && ` from IP ${log.ipAddress}`}
+              </p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'timestamp',
+      header: 'Time',
+      cell: ({ row }: any) => {
+        const log = row.original;
+        return (
+          <div className="text-sm text-muted-foreground">
+            {getRelativeTime(new Date(log.timestamp))}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'userName',
+      header: 'User',
+      cell: ({ row }: any) => {
+        const log = row.original;
+        return log.userName ? (
+          <div className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            {log.userName}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        );
+      },
+    },
+    {
+      accessorKey: 'entityType',
+      header: 'Entity Type',
+      cell: ({ row }: any) => {
+        const log = row.original;
+        return log.entityType ? (
+          <span className="text-sm text-foreground capitalize">{log.entityType}</span>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">
         Activity Log
       </h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {logs && logs.length > 0 ? (
-            <ul className="space-y-4">
-              {logs.map((log: ActivityLog) => {
-                const Icon = iconMap[log.action as ActivityType] || Settings;
-                const formattedAction = formatAction(
-                  log.action as ActivityType
-                );
-
-                // Extract additional information when available
-                let entityInfo = '';
-                if (log.entityType && log.entityId) {
-                  entityInfo = log.entityName 
-                    ? ` - ${log.entityName}`
-                    : ` - ${log.entityType} #${log.entityId}`;
-                }
-
-                // Extract meaningful details from the details JSON
-                let detailsInfo = '';
-                if (log.details) {
-                  const details = log.details as any;
-                  if (details.created) {
-                    const name = details.created.name || details.created.title;
-                    if (name) {
-                      detailsInfo = `: "${name}"`;
-                    }
-                  } else if (details.deleted) {
-                    const name = details.deleted.name || details.deleted.title;
-                    if (name) {
-                      detailsInfo = `: "${name}"`;
-                    }
-                  } else if (details.before && details.after) {
-                    // Show what changed in updates
-                    const changes = [];
-                    for (const key in details.after) {
-                      if (details.before[key] !== details.after[key] && 
-                          key !== 'updatedAt' && key !== 'updatedBy') {
-                        changes.push(key);
-                      }
-                    }
-                    if (changes.length > 0) {
-                      detailsInfo = `: changed ${changes.join(', ')}`;
-                    }
-                  }
-                }
-
-                return (
-                  <li key={log.id} className="flex items-start space-x-4">
-                    <div className="bg-orange-100 rounded-full p-2 mt-1">
-                      <Icon className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {formattedAction}{entityInfo}{detailsInfo}
-                        {log.ipAddress && ` from IP ${log.ipAddress}`}
-                      </p>
-                      <p className="text-xs text-gray-500 flex items-center">
-                        {getRelativeTime(new Date(log.timestamp))}
-                        {log.userName && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700">
-                            by {log.userName}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-12">
-              <AlertCircle className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No activity yet
-              </h3>
-              <p className="text-sm text-gray-500 max-w-sm">
-                When you perform actions like signing in or updating your
-                account, they&apos;ll appear here.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      
+      {logs && logs.length > 0 ? (
+        <DataTable
+          columns={columns}
+          data={logs}
+          title="Recent Activity"
+          searchPlaceholder="Search activity..."
+          filterColumn="action"
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center text-center py-12 border rounded-lg bg-card">
+          <AlertCircle className="h-12 w-12 text-primary mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            No activity yet
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            When you perform actions like signing in or updating your
+            account, they&apos;ll appear here.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

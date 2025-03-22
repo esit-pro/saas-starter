@@ -227,13 +227,16 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
               type="button" 
               variant="outline"
               onClick={() => router.back()}
+              className="h-9"
             >
               Cancel
             </Button>
             
             <Button 
               type="submit" 
+              variant="primary"
               disabled={isSaving || !name.trim() || !contactName.trim() || !email.trim()}
+              className="h-9"
             >
               {isSaving ? (
                 <>

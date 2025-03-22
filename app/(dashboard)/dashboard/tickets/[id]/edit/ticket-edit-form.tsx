@@ -291,13 +291,16 @@ export function TicketEditForm({ ticketId }: TicketEditFormProps) {
               type="button" 
               variant="outline"
               onClick={() => router.back()}
+              className="h-9"
             >
               Cancel
             </Button>
             
             <Button 
               type="submit" 
+              variant="primary"
               disabled={isSaving || !title.trim() || !clientId}
+              className="h-9"
             >
               {isSaving ? (
                 <>
