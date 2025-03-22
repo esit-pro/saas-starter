@@ -415,7 +415,6 @@ function TicketDetailPane({
           <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Priority
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             <div className="flex items-center">
               {isEditing ? (
@@ -450,14 +449,7 @@ function TicketDetailPane({
           
           <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">
-              {isEditing ? (
-                <div className="flex items-center justify-between">
-                  <span>Category</span>
-                  {isEditing && <span className="text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
-                </div>
-              ) : (
-                "Category"
-              )}
+              Category
             </h3>
             <div className="flex items-center">
               {isEditing ? (
@@ -481,7 +473,6 @@ function TicketDetailPane({
           <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Description
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             {isEditing ? (
               <Textarea

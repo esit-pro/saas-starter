@@ -362,7 +362,6 @@ function ClientDetailPane({
           <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Contact Information
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             <div className="space-y-3">
               <div className="flex items-center">
@@ -430,7 +429,6 @@ function ClientDetailPane({
           <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Account Details
-              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             <div className="space-y-3">
               <div className="flex items-center">
@@ -483,7 +481,6 @@ function ClientDetailPane({
         <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
           <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
             Notes
-            {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
           </h3>
           {isEditing ? (
             <Textarea
