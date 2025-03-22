@@ -146,15 +146,26 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       const sent = await send2FACode(foundUser.phoneNumber, code);
       if (!sent) {
         console.error(`Failed to send 2FA code to user ${foundUser.id} with phone ${foundUser.phoneNumber}`);
+        
+        // Check if phone number is valid
+        const phoneNumber = foundUser.phoneNumber;
+        const digitsOnly = phoneNumber.replace(/\D/g, '');
+        if (digitsOnly.length < 10) {
+          return {
+            error: 'Your phone number appears to be invalid. Please update your profile with a valid phone number.',
+            email,
+          };
+        }
+        
         return {
-          error: 'We were unable to send your verification code. Please try again or contact support.',
+          error: 'We were unable to send your verification code. Please check your phone number or try again later.',
           email,
         };
       }
     } catch (error) {
       console.error('Error in 2FA code sending:', error);
       return {
-        error: 'An error occurred while sending your verification code. Please try again.',
+        error: 'An error occurred while sending your verification code. This might be due to an invalid phone number or a service disruption.',
         email,
       };
     }

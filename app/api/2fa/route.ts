@@ -178,5 +178,64 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+// Admin-only route to check 2FA status 
+export async function GET(request: NextRequest) {
+  try {
+    // Check for admin access
+    const url = new URL(request.url);
+    const adminToken = url.searchParams.get('admin_token');
+    
+    // This is a simple check - in production you would use a more secure method
+    if (adminToken !== process.env.ADMIN_TOKEN) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Check if there's an action to perform
+    const action = url.searchParams.get('action');
+    const userId = url.searchParams.get('userId');
+    
+    if (action === 'disable' && userId) {
+      // Disable 2FA for the specified user
+      await db.update(users)
+        .set({ twoFactorEnabled: false })
+        .where(eq(users.id, parseInt(userId)));
+      
+      return NextResponse.json({ 
+        success: true,
+        message: `Two-factor authentication has been disabled for user ID ${userId}`
+      });
+    }
+    
+    // Get all users with 2FA enabled
+    const usersWithTwoFactor = await db.select({
+      id: users.id,
+      email: users.email,
+      phoneNumber: users.phoneNumber,
+      phoneVerified: users.phoneVerified,
+      twoFactorEnabled: users.twoFactorEnabled
+    })
+    .from(users)
+    .where(eq(users.twoFactorEnabled, true));
+    
+    // Get all users for reference
+    const allUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      twoFactorEnabled: users.twoFactorEnabled
+    })
+    .from(users)
+    .limit(10);
+    
+    return NextResponse.json({ 
+      usersWithTwoFactor,
+      allUsers,
+      message: 'Use ?action=disable&userId=X to disable 2FA for a user'
+    });
+  } catch (error) {
+    console.error('Error checking 2FA status:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 // Import for getUser missing - add it
 import { getUser } from '@/lib/db/queries'; 

@@ -158,11 +158,22 @@ export function UserAuthForm({
           });
         }, 1000);
       } else {
-        setTwoFactorError(data.error || "Failed to resend code");
+        // Display specific error from server or fallback message
+        const errorMessage = data.error || "Failed to resend verification code";
+        console.error("Code resend error response:", errorMessage);
+        
+        // Show more user-friendly error messages for specific issues
+        if (errorMessage.includes("invalid phone number")) {
+          setTwoFactorError("Your phone number appears to be invalid. Please update your profile settings.");
+        } else if (errorMessage.includes("Too many")) {
+          setTwoFactorError("Too many code requests. Please wait before trying again.");
+        } else {
+          setTwoFactorError(errorMessage);
+        }
       }
     } catch (error) {
-      setTwoFactorError("Failed to resend code. Please try again.");
-      console.error("Code resend error:", error);
+      console.error("Code resend network error:", error);
+      setTwoFactorError("Network error. Please check your connection and try again.");
     } finally {
       setResendingCode(false);
     }
@@ -223,7 +234,10 @@ export function UserAuthForm({
           </div>
           
           {twoFactorError && (
-            <div className="text-sm font-medium text-destructive">{twoFactorError}</div>
+            <div className="p-3 text-sm rounded-md bg-red-50 border border-red-200 text-red-800 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 text-red-500" />
+              <div>{twoFactorError}</div>
+            </div>
           )}
           
           <Button 

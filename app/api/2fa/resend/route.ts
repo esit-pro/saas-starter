@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No phone number associated with this account' }, { status: 400 });
     }
     
+    // Validate phone number format
+    const phoneNumber = user.phoneNumber;
+    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      return NextResponse.json({ 
+        error: 'Your phone number appears to be invalid. Please update your profile with a valid phone number.' 
+      }, { status: 400 });
+    }
+    
     // Check rate limiting
     const canGenerate = await canGenerateCode(user.id, '2fa_login');
     if (!canGenerate) {
@@ -72,13 +81,21 @@ export async function POST(request: NextRequest) {
     if (!sent) {
       console.error(`Failed to send 2FA code to user ${user.id} with phone ${user.phoneNumber}`);
       return NextResponse.json({ 
-        error: 'Failed to send verification code. Please try again or contact support.'
+        error: 'Failed to send verification code. This might be due to an invalid phone number or a service disruption. Please try again or contact support.'
       }, { status: 500 });
     }
     
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error resending 2FA code:', error);
-    return NextResponse.json({ error: 'Internal server error. Please try again later.' }, { status: 500 });
+    
+    // Provide more specific error message if possible
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    }
+    
+    return NextResponse.json({ 
+      error: 'An error occurred while sending your verification code. Please try again later.' 
+    }, { status: 500 });
   }
 } 
