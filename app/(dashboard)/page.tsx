@@ -15,7 +15,8 @@ import {
   CheckCircle,
   AlertCircle,
   Circle,
-  DollarSign
+  DollarSign,
+  Receipt
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { RevenueChart } from './components/revenue-chart';
@@ -34,6 +35,47 @@ const formatCurrency = (amount: number) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+};
+
+/**
+ * Calculate estimated taxes based on revenue and expense data
+ * This is a placeholder implementation that should be replaced with actual tax calculations
+ */
+const calculateEstimatedTaxes = (
+  currentRevenue: number, 
+  previousRevenue: number, 
+  currentExpenses: number,
+  previousExpenses: number
+) => {
+  // Calculate estimated taxable income (simple implementation)
+  const currentTaxableIncome = Math.max(0, currentRevenue - currentExpenses);
+  const previousTaxableIncome = Math.max(0, previousRevenue - previousExpenses);
+
+  // Basic progressive tax calculation (placeholder rates)
+  // In a real implementation, these would be based on current tax codes
+  const calculateTax = (income: number) => {
+    if (income <= 0) return 0;
+    
+    // Simplified progressive tax brackets (for demonstration)
+    if (income <= 10000) return income * 0.10;
+    if (income <= 40000) return 1000 + (income - 10000) * 0.15;
+    if (income <= 90000) return 5500 + (income - 40000) * 0.25;
+    return 18000 + (income - 90000) * 0.32;
+  };
+
+  // Calculate estimated quarterly tax payment
+  const currentEstimatedTax = calculateTax(currentTaxableIncome);
+  const previousEstimatedTax = calculateTax(previousTaxableIncome);
+
+  // Calculate the trend percentage
+  const taxTrend = previousEstimatedTax > 0
+    ? Math.round(((currentEstimatedTax - previousEstimatedTax) / previousEstimatedTax) * 100)
+    : 0;
+
+  return {
+    estimatedTax: currentEstimatedTax,
+    trend: taxTrend
+  };
 };
 
 const statusColors = {
@@ -75,34 +117,86 @@ export default async function Dashboard() {
   // Get real data from the database
   const clientsData = await getClientSummary(teamId);
   
-  // Get active tickets count
-  const activeTickets = await getServiceTicketsByFilters(teamId, { 
+  // Current period (last 30 days)
+  const currentEndDate = new Date();
+  const currentStartDate = new Date();
+  currentStartDate.setDate(currentStartDate.getDate() - 30);
+  
+  // Previous period (30-60 days ago)
+  const previousEndDate = new Date(currentStartDate);
+  previousEndDate.setDate(previousEndDate.getDate() - 1); // Day before current period starts
+  const previousStartDate = new Date(previousEndDate);
+  previousStartDate.setDate(previousStartDate.getDate() - 30); // 30 days before previous end date
+
+  // Get active tickets count for current period
+  const currentActiveTickets = await getServiceTicketsByFilters(teamId, { 
     status: 'open' 
   });
   
-  // Get time tracking data for the last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
-  const timeData = await getTimeTrackingSummary(teamId, {
-    startDate: thirtyDaysAgo,
-    endDate: new Date()
+  // Get active tickets count for previous period
+  const previousActiveTickets = await getServiceTicketsByFilters(teamId, { 
+    status: 'open',
+    createdBefore: currentStartDate
   });
   
-  // Get expense data for the last 30 days
-  const expenseData = await getExpenseSummary(teamId, {
-    startDate: thirtyDaysAgo,
-    endDate: new Date()
+  // Calculate tickets trend percentage
+  const ticketsTrend = previousActiveTickets.length > 0 
+    ? Math.round(((currentActiveTickets.length - previousActiveTickets.length) / previousActiveTickets.length) * 100) 
+    : 0;
+  
+  // Get time tracking data for the current period
+  const currentTimeData = await getTimeTrackingSummary(teamId, {
+    startDate: currentStartDate,
+    endDate: currentEndDate
   });
+  
+  // Get time tracking data for the previous period
+  const previousTimeData = await getTimeTrackingSummary(teamId, {
+    startDate: previousStartDate,
+    endDate: previousEndDate
+  });
+  
+  // Calculate hours tracked trend percentage
+  const hoursTrend = (previousTimeData?.totalHours || 0) > 0
+    ? Math.round((((currentTimeData?.totalHours || 0) - (previousTimeData?.totalHours || 0)) / (previousTimeData?.totalHours || 1)) * 100)
+    : 0;
+  
+  // Get expense data for the current period
+  const currentExpenseData = await getExpenseSummary(teamId, {
+    startDate: currentStartDate,
+    endDate: currentEndDate
+  });
+  
+  // Get expense data for the previous period
+  const previousExpenseData = await getExpenseSummary(teamId, {
+    startDate: previousStartDate,
+    endDate: previousEndDate
+  });
+  
+  // Calculate expenses trend percentage
+  const expensesTrend = (previousExpenseData?.totalExpenses || 0) > 0
+    ? Math.round((((currentExpenseData?.totalExpenses || 0) - (previousExpenseData?.totalExpenses || 0)) / (previousExpenseData?.totalExpenses || 1)) * 100)
+    : 0;
   
   // Get recent tickets (all statuses, limit to 4)
   const recentTickets = await getServiceTicketsByFilters(teamId, {}, 4);
   
   // Calculate revenue data based on billed time and expenses
-  const revenueData = {
-    monthToDate: (timeData?.totalBillableAmount || 0) + (expenseData?.totalBillableAmount || 0),
-    lastMonth: (timeData?.totalBillableAmount || 0) * 0.85 // Estimate for demo purposes
-  };
+  const currentRevenue = (currentTimeData?.totalBillableAmount || 0) + (currentExpenseData?.totalBillableAmount || 0);
+  const previousRevenue = (previousTimeData?.totalBillableAmount || 0) + (previousExpenseData?.totalBillableAmount || 0);
+  
+  // Calculate revenue trend percentage
+  const revenueTrend = previousRevenue > 0
+    ? Math.round(((currentRevenue - previousRevenue) / previousRevenue) * 100)
+    : 0;
+
+  // Calculate estimated taxes
+  const taxData = calculateEstimatedTaxes(
+    currentRevenue,
+    previousRevenue,
+    currentExpenseData?.totalExpenses || 0,
+    previousExpenseData?.totalExpenses || 0
+  );
 
   // Get actual revenue data for the current year
   const currentYear = new Date().getFullYear();
@@ -123,34 +217,34 @@ export default async function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard 
           title="Net Revenue" 
-          value={formatCurrency(revenueData.monthToDate)} 
+          value={formatCurrency(currentRevenue)} 
           description="Month to date" 
           icon={DollarSign}
-          trend={Math.round(((revenueData.monthToDate - revenueData.lastMonth) / revenueData.lastMonth) * 100)}
+          trend={revenueTrend}
           colorClass="bg-green-100 text-green-600"
         />
         <StatCard 
-          title="Open Tickets" 
-          value={activeTickets.length} 
-          description="Awaiting resolution" 
-          icon={Ticket}
-          trend={12} // This would need real historical data to calculate
-          colorClass="bg-blue-100 text-blue-600"
+          title="Estimated Taxes Due" 
+          value={formatCurrency(taxData.estimatedTax)} 
+          description="Based on current period" 
+          icon={Receipt}
+          trend={taxData.trend}
+          colorClass="bg-purple-100 text-purple-600"
         />
         <StatCard 
           title="Hours Tracked" 
-          value={`${timeData?.totalHours || 0}h`} 
-          description={`${timeData?.billableHours || 0}h billable`} 
+          value={`${currentTimeData?.totalHours || 0}h`} 
+          description={`${currentTimeData?.billableHours || 0}h billable`} 
           icon={Clock}
-          trend={8} // This would need real historical data to calculate
+          trend={hoursTrend}
           colorClass="bg-green-100 text-green-600"
         />
         <StatCard 
           title="Total Expenses" 
-          value={formatCurrency(expenseData?.totalExpenses || 0)} 
-          description={`${formatCurrency(expenseData?.billableExpenses || 0)} billable`} 
+          value={formatCurrency(currentExpenseData?.totalExpenses || 0)} 
+          description={`${formatCurrency(currentExpenseData?.billableExpenses || 0)} billable`} 
           icon={CreditCard}
-          trend={-3} // This would need real historical data to calculate
+          trend={expensesTrend}
           colorClass="bg-orange-100 text-orange-600"
         />
       </div>
