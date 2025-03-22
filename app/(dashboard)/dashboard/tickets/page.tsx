@@ -300,23 +300,23 @@ function TicketDetailPane({
 
   return (
     <div className="h-full overflow-auto">
-      <div className="p-6 flex flex-col gap-6">
+      <div className="p-6 flex flex-col gap-8">
         {/* Ticket header with edit button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-4">
+            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-primary/5 flex items-center justify-center text-gray-500 dark:text-primary mr-6">
               <Ticket className="h-8 w-8" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center justify-between max-w-md">
+              <div className="flex items-center justify-between max-w-xl">
                 {isEditing ? (
-                  <div className="flex flex-col gap-2 w-full max-w-md">
+                  <div className="flex flex-col gap-3 w-full max-w-xl">
                     <Input
                       value={displayData.title || ''}
                       onChange={(e) => handleChange('title', e.target.value)}
-                      className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                      className="text-2xl font-bold h-auto py-2 px-3 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
                     />
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-3 justify-end mt-1">
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -353,7 +353,7 @@ function TicketDetailPane({
                     <select
                       value={displayData.status}
                       onChange={(e) => handleChange('status', e.target.value)}
-                      className="px-2.5 py-1 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border"
+                      className="px-3 py-1.5 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border border-blue-300 dark:border-blue-700 min-w-[140px]"
                     >
                       <option value="open">Open</option>
                       <option value="in-progress">In Progress</option>
@@ -386,12 +386,12 @@ function TicketDetailPane({
                 </div>
                 <div className="flex items-center">
                   {isEditing ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <span>Client:</span>
                       <select
                         value={displayData.clientId}
                         onChange={(e) => handleChange('clientId', Number(e.target.value))}
-                        className="bg-white dark:bg-zinc-800 rounded border text-sm border-blue-300 dark:border-blue-700 p-1"
+                        className="bg-white dark:bg-zinc-800 rounded border text-sm border-blue-300 dark:border-blue-700 p-1.5 min-w-[180px]"
                       >
                         {clients.map(client => (
                           <option key={client.id} value={client.id}>{client.name}</option>
@@ -414,8 +414,8 @@ function TicketDetailPane({
         </div>
 
         {/* Ticket details cards */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 ${isEditing ? 'rounded-lg p-2' : ''}`}>
-          <div className={`border dark:border-border rounded-lg p-4`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${isEditing ? 'rounded-lg p-4 bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-5`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Priority
             </h3>
@@ -440,7 +440,7 @@ function TicketDetailPane({
             </div>
           </div>
           
-          <div className={`border dark:border-border rounded-lg p-4`}>
+          <div className={`border dark:border-border rounded-lg p-5`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Time Tracked</h3>
             <div className="flex items-center">
               <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" />
@@ -450,7 +450,7 @@ function TicketDetailPane({
             </div>
           </div>
           
-          <div className={`border dark:border-border rounded-lg p-4`}>
+          <div className={`border dark:border-border rounded-lg p-5`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">
               Category
             </h3>
@@ -473,7 +473,7 @@ function TicketDetailPane({
 
         {/* Description Section */}
         {(displayData.description || isEditing) && (
-          <div className={`border dark:border-border rounded-lg p-4`}>
+          <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Description
             </h3>
@@ -482,7 +482,7 @@ function TicketDetailPane({
                 value={displayData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Enter detailed description of the issue"
-                className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-1"
+                className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-2"
               />
             ) : (
               <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
@@ -533,12 +533,12 @@ function TicketDetailPane({
           {activeTab === 'activity' && (
             <div className="space-y-8">
               {/* Status history timeline */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Status History</h3>
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">Status History</h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {statusHistory.map((change) => (
-                    <div key={change.id} className="relative pl-6 pb-4 last:pb-0 border-l dark:border-border">
+                    <div key={change.id} className="relative pl-8 pb-5 last:pb-0 border-l dark:border-border">
                       <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-blue-500"></div>
                       <div className="text-sm text-gray-500 dark:text-muted-foreground">
                         {formatDistanceToNow(change.timestamp, { addSuffix: true })}
@@ -555,8 +555,8 @@ function TicketDetailPane({
               </div>
               
               {/* Comments section */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Comments</h3>
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">Comments</h3>
                 <TicketComments
                   ticketId={ticket.id}
                   comments={comments.filter(c => c.ticketId === ticket.id)}
@@ -569,8 +569,8 @@ function TicketDetailPane({
           {activeTab === 'time' && (
             <div className="space-y-6">
               {/* Time log form */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Log Time</h3>
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">Log Time</h3>
                 <TimeEntryForm
                   ticketId={ticket.id}
                   clientId={ticket.clientId}
@@ -579,15 +579,15 @@ function TicketDetailPane({
               </div>
               
               {/* Time entries list */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">
                   Time Entries {timeEntries.length > 0 && `(${timeSpentString} total)`}
                 </h3>
                 
                 {timeEntries.length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-center py-4">No time entries logged yet</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {timeEntries.map((entry) => {
                       const entryHours = Math.floor(entry.duration / 60);
                       const entryMinutes = entry.duration % 60;
@@ -596,7 +596,7 @@ function TicketDetailPane({
                         : `${entryMinutes}m`;
                         
                       return (
-                        <div key={entry.id} className="flex items-start border-b dark:border-border pb-4 last:border-0 last:pb-0">
+                        <div key={entry.id} className="flex items-start border-b dark:border-border pb-5 last:border-0 last:pb-0">
                           <div className="w-12 h-12 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-4">
                             <Clock className="h-6 w-6" />
                           </div>
@@ -643,8 +643,8 @@ function TicketDetailPane({
           {activeTab === 'expenses' && (
             <div className="space-y-6">
               {/* Expense form */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">Add Expense</h3>
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">Add Expense</h3>
                 <ExpenseForm 
                   ticketId={ticket.id}
                   clientId={ticket.clientId}
@@ -653,17 +653,17 @@ function TicketDetailPane({
               </div>
               
               {/* Expenses list */}
-              <div className="border dark:border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-4">
+              <div className="border dark:border-border rounded-lg p-5 bg-white dark:bg-zinc-800/30">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-5">
                   Expenses {expenses.length > 0 && `($${totalExpenses.toFixed(2)} total)`}
                 </h3>
                 
                 {expenses.length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-center py-4">No expenses recorded yet</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {expenses.map((expense) => (
-                      <div key={expense.id} className="flex items-start border-b dark:border-border pb-4 last:border-0 last:pb-0">
+                      <div key={expense.id} className="flex items-start border-b dark:border-border pb-5 last:border-0 last:pb-0">
                         <div className="w-12 h-12 rounded-md bg-green-50 dark:bg-green-950 flex items-center justify-center text-green-600 dark:text-green-400 mr-4">
                           <DollarSignIcon className="h-6 w-6" />
                         </div>
@@ -1853,7 +1853,7 @@ export default function TicketsPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 w-2/5 bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
+              className="fixed inset-y-0 right-0 w-[55%] bg-gray-100 dark:bg-zinc-900/90 dark:backdrop-blur-md border-l dark:border-border/40 shadow-lg overflow-auto"
               style={{ zIndex: 20 }} // Higher z-index than the backdrop
             >
               <div className="flex justify-between items-center p-4 border-b dark:border-border">
@@ -1868,7 +1868,7 @@ export default function TicketsPage() {
                   <span className="sr-only">Close</span>
                 </Button>
               </div>
-              <div className="p-4">
+              <div className="p-6">
                 <TicketDetailPane 
                   ticket={selectedTicket}
                   comments={comments.filter(c => c.ticketId === selectedTicket.id)}
