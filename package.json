@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -87,7 +87,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "daisyui": "^5.0.9",
     "eslint-config-next": "15.2.3"
   },
   "pnpm": {
