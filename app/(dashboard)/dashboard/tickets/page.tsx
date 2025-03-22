@@ -1147,6 +1147,13 @@ export default function TicketsPage() {
   // Handler for deleting a ticket
   const handleDeleteTicket = async (id: number) => {
     try {
+      // Validate the ID is a valid number
+      if (typeof id !== 'number' || isNaN(id) || id <= 0) {
+        console.error('Invalid ticket ID for deletion:', id);
+        toast.error('Error deleting ticket: Invalid ID');
+        return Promise.reject('Invalid ticket ID');
+      }
+      
       // Call the server action to delete the ticket
       const result = await deleteTicket({ id }, new FormData());
       

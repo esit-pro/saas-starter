@@ -578,6 +578,13 @@ export default function ClientsPage() {
   // Handler for deleting a client
   const handleDeleteClient = async (id: number) => {
     try {
+      // Validate the ID is a valid number
+      if (typeof id !== 'number' || isNaN(id) || id <= 0) {
+        console.error('Invalid client ID for deletion:', id);
+        toast.error('Error deleting client: Invalid ID');
+        return Promise.reject('Invalid client ID');
+      }
+      
       const result = await deleteClient({ id }, new FormData());
       
       if (result.error) {
