@@ -11,9 +11,18 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 
+// Define allowed messages to prevent arbitrary content
+const ALLOWED_MESSAGES: Record<string, string> = {
+  'registration-disabled': 'Registration is temporarily disabled for private testing',
+  'invalid-credentials': 'Invalid email or password',
+  'account-locked': 'Your account has been locked. Please contact support',
+  'email-verification': 'Please verify your email address before signing in',
+};
+
 export default function SignInContent() {
   const searchParams = useSearchParams();
-  const message = searchParams.get('message');
+  const messageKey = searchParams.get('message');
+  const message = messageKey ? ALLOWED_MESSAGES[messageKey] : null;
   
   return (
     <>
