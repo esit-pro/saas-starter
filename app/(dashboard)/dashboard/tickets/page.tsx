@@ -66,7 +66,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { CreateTicketForm } from '../../components/create-ticket-form';
-import { TicketComments, Comment } from '../../components/ticket-comments';
+import { TicketComments, Comment as BaseComment } from '../../components/ticket-comments';
 import { TimeEntryForm } from '../../components/time-entry-form';
 import { ExpenseForm } from '../../components/expense-form';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,23 +88,19 @@ type ServiceTicket = {
   updatedAt: Date;
   closedAt: Date | null;
   deletedAt: Date | null;
-  metadata: any;
   client: {
     id: number;
     name: string;
-    // ... other client properties
   };
   assignedUser: {
     id: number;
     name: string;
     email: string;
-    // ... other user properties
   } | null;
   createdByUser: {
     id: number;
     name: string;
     email: string;
-    // ... other user properties
   };
 };
 
@@ -171,6 +167,14 @@ type StatusChange = {
     id: number;
     name: string;
   };
+};
+
+// Extend the base Comment type to include additional fields that may be coming from the server
+type Comment = BaseComment & {
+  updatedAt?: Date;
+  attachments?: any;
+  teamId?: number;
+  createdBy?: number | null;
 };
 
 // Ticket detail pane component
@@ -873,23 +877,103 @@ export default function TicketsPage() {
         }
         
         if (result.tickets) {
-          const ticketsWithMetadata = result.tickets.map(ticket => ({
-            ...ticket,
-            metadata: {},
-            clientId: ticket.clientId || 0,
-            client: ticket.client || { id: 0, name: 'Unknown' },
-            assignedUser: ticket.assignedUser || null,
-            createdByUser: ticket.createdByUser || { id: 0, name: 'Unknown', email: '' },
-            createdBy: ticket.createdBy || 0
-          }));
+          const ticketsWithMetadata = result.tickets.map(ticket => {
+            // Ensure client has the expected structure
+            const client = (() => {
+              if (!ticket.client) return { id: 0, name: 'Unknown' };
+              
+              // Check if client is an array
+              if (Array.isArray(ticket.client)) {
+                return ticket.client.length > 0 
+                  ? { id: Number(ticket.client[0].id) || 0, name: String(ticket.client[0].name) || 'Unknown' }
+                  : { id: 0, name: 'Unknown' };
+              }
+              
+              // Client is an object
+              return { 
+                id: Number(ticket.client.id) || 0, 
+                name: String(ticket.client.name) || 'Unknown'
+              };
+            })();
+            
+            // Ensure assignedUser has the expected structure or is null
+            const assignedUser = (() => {
+              if (!ticket.assignedUser) return null;
+              
+              // Check if assignedUser is an array
+              if (Array.isArray(ticket.assignedUser)) {
+                return ticket.assignedUser.length > 0 
+                  ? {
+                      id: Number(ticket.assignedUser[0].id) || 0,
+                      name: String(ticket.assignedUser[0].name) || 'Unknown',
+                      email: String(ticket.assignedUser[0].email) || ''
+                    }
+                  : null;
+              }
+              
+              // assignedUser is an object
+              return {
+                id: Number(ticket.assignedUser.id) || 0,
+                name: String(ticket.assignedUser.name) || 'Unknown',
+                email: String(ticket.assignedUser.email) || ''
+              };
+            })();
+            
+            // Ensure createdByUser has the expected structure
+            const createdByUser = (() => {
+              if (!ticket.createdByUser) return { id: 0, name: 'Unknown', email: '' };
+              
+              // Check if createdByUser is an array
+              if (Array.isArray(ticket.createdByUser)) {
+                return ticket.createdByUser.length > 0 
+                  ? {
+                      id: Number(ticket.createdByUser[0].id) || 0,
+                      name: String(ticket.createdByUser[0].name) || 'Unknown',
+                      email: String(ticket.createdByUser[0].email) || ''
+                    }
+                  : { id: 0, name: 'Unknown', email: '' };
+              }
+              
+              // createdByUser is an object
+              return {
+                id: Number(ticket.createdByUser.id) || 0,
+                name: String(ticket.createdByUser.name) || 'Unknown',
+                email: String(ticket.createdByUser.email) || ''
+              };
+            })();
+            
+            // Define the base return object with all required properties
+            const formattedTicket: ServiceTicket = {
+              id: Number(ticket.id) || 0,
+              teamId: Number(ticket.teamId) || 0,
+              clientId: Number(ticket.clientId) || 0,
+              title: String(ticket.title) || '',
+              description: ticket.description || null,
+              status: String(ticket.status) || 'open',
+              priority: String(ticket.priority) || 'medium',
+              category: ticket.category || null,
+              assignedTo: ticket.assignedTo ? Number(ticket.assignedTo) : null,
+              dueDate: ticket.dueDate ? new Date(ticket.dueDate) : null,
+              createdBy: Number(ticket.createdBy) || 0,
+              createdAt: new Date(ticket.createdAt),
+              updatedAt: new Date(ticket.updatedAt),
+              closedAt: ticket.closedAt ? new Date(ticket.closedAt) : null,
+              deletedAt: ticket.deletedAt ? new Date(ticket.deletedAt) : null,
+              client,
+              assignedUser,
+              createdByUser
+            };
+            
+            return formattedTicket;
+          });
           
-          setTickets(ticketsWithMetadata as ServiceTicket[]);
+          setTickets(ticketsWithMetadata);
           setActiveTickets(ticketsWithMetadata.filter(t => 
             t.status === 'open' || t.status === 'in-progress' || t.status === 'on-hold'
-          ) as ServiceTicket[]);
+          ));
           setCompletedTickets(ticketsWithMetadata.filter(t => 
             t.status === 'completed' || t.status === 'closed'
-          ) as ServiceTicket[]);
+          ));
         }
       } catch (error) {
         console.error('Failed to fetch tickets:', error);
@@ -940,8 +1024,7 @@ export default function TicketsPage() {
                 name: (result.ticket as any).assignedUser.name || 'Unknown',
                 email: (result.ticket as any).assignedUser.email
               }
-            : null,
-          metadata: (result.ticket as any).metadata || {}
+            : null
         };
         setSelectedTicket(formattedTicket);
         toast.success('Ticket created successfully');
@@ -1435,8 +1518,7 @@ export default function TicketsPage() {
                   name: (result.ticket as any).assignedUser.name || 'Unknown',
                   email: (result.ticket as any).assignedUser.email
                 }
-              : null,
-            metadata: (result.ticket as any).metadata || {}
+              : null
           };
           setSelectedTicket(formattedTicket);
         }
@@ -1446,10 +1528,45 @@ export default function TicketsPage() {
           setComments(prevComments => {
             // Keep old comments for other tickets, add new ones for this ticket
             const filteredOldComments = prevComments.filter(comment => comment.ticketId !== selectedTicket.id);
-            const formattedComments = result.comments.map(comment => ({
-              ...comment,
-              user: comment.user || { id: 0, name: 'Unknown', email: '' }
-            }));
+            
+            // Properly format new comments to match the Comment type
+            const formattedComments = result.comments.map(comment => {
+              const formattedUser = (() => {
+                if (!comment.user) return { id: 0, name: 'Unknown', email: '' };
+                
+                // Check if user is an array
+                if (Array.isArray(comment.user)) {
+                  return comment.user.length > 0 
+                    ? {
+                        id: Number(comment.user[0].id) || 0,
+                        name: String(comment.user[0].name) || 'Unknown',
+                        email: String(comment.user[0].email) || ''
+                      }
+                    : { id: 0, name: 'Unknown', email: '' };
+                }
+                
+                // User is an object
+                return {
+                  id: Number(comment.user.id) || 0,
+                  name: String(comment.user.name) || 'Unknown',
+                  email: String(comment.user.email) || ''
+                };
+              })();
+              
+              return {
+                id: Number(comment.id) || 0,
+                ticketId: Number(comment.ticketId) || 0,
+                content: String(comment.content) || '',
+                attachments: comment.attachments || null,
+                isInternal: Boolean(comment.isInternal),
+                createdAt: new Date(comment.createdAt),
+                updatedAt: comment.updatedAt ? new Date(comment.updatedAt) : new Date(comment.createdAt),
+                createdBy: comment.createdBy !== undefined ? Number(comment.createdBy) : null,
+                teamId: Number(comment.teamId) || 0,
+                user: formattedUser
+              } as Comment;
+            });
+            
             return [...formattedComments, ...filteredOldComments];
           });
         }

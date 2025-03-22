@@ -274,7 +274,11 @@ export const createInvoice = validatedActionWithUser(
             .values(data.ticketIds.map(ticketId => ({
               invoiceId: newInvoice.id,
               ticketId,
+              teamId,
+              createdBy: user.id,
+              updatedBy: user.id,
               createdAt: new Date(),
+              updatedAt: new Date(),
             })));
         }
         

@@ -881,7 +881,10 @@ export async function getClientsForSelection(_formData?: FormData) {
         name: clients.name,
       })
       .from(clients)
-      .where(eq(clients.teamId, teamId))
+      .where(and(
+        eq(clients.teamId, teamId),
+        isNull(clients.deletedAt)
+      ))
       .orderBy(clients.name);
 
     return { clients: clientList };

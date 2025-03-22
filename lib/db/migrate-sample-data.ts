@@ -424,8 +424,14 @@ async function ensureTeam(userIds: { janeId: number, johnId: number }) {
   });
   
   if (existingTeam) {
-    console.log(`Using existing team: ${existingTeam.team.name} (ID: ${existingTeam.team.id})`);
-    return existingTeam.team.id;
+    // Check if team is an array or an object and handle accordingly
+    const teamData = existingTeam.team;
+    // Make sure the team data is not an array
+    const teamName = typeof teamData === 'object' && !Array.isArray(teamData) && teamData ? teamData.name : 'Unknown Team';
+    const teamId = typeof teamData === 'object' && !Array.isArray(teamData) && teamData ? teamData.id : 0;
+    
+    console.log(`Using existing team: ${teamName} (ID: ${teamId})`);
+    return teamId;
   }
   
   // Create a new team

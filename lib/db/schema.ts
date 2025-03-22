@@ -24,6 +24,9 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by'),
+  updatedBy: integer('updated_by'),
+  deletedBy: integer('deleted_by'),
 });
 
 export const verificationCodes = pgTable('verification_codes', {
@@ -33,6 +36,11 @@ export const verificationCodes = pgTable('verification_codes', {
   type: varchar('type', { length: 20 }).notNull(), // 'phone_verification' or '2fa_login'
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
   used: boolean('used').notNull().default(false),
 });
 
@@ -58,6 +66,12 @@ export const teamMembers = pgTable('team_members', {
     .references(() => teams.id),
   role: varchar('role', { length: 50 }).notNull(),
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
 });
 
 export const activityLogs = pgTable('activity_logs', {
@@ -93,6 +107,12 @@ export const invitations = pgTable('invitations', {
     .references(() => users.id),
   invitedAt: timestamp('invited_at').notNull().defaultNow(),
   status: varchar('status', { length: 20 }).notNull().default('pending'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
 });
 
 // Common audit fields for all entities
@@ -101,6 +121,16 @@ const auditFields = {
   updatedBy: integer('updated_by').references(() => users.id),
   deletedBy: integer('deleted_by').references(() => users.id),
   teamId: integer('team_id').notNull().references(() => teams.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+};
+
+// For tables that don't need teamId
+const userAuditFields = {
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
@@ -470,6 +500,12 @@ export const invoiceTickets = pgTable('invoice_tickets', {
   invoiceId: integer('invoice_id').notNull().references(() => invoices.id),
   ticketId: integer('ticket_id').notNull().references(() => serviceTickets.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
+  teamId: integer('team_id').notNull().references(() => teams.id),
 });
 
 // Add relations for invoices
