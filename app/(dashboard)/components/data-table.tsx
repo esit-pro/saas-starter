@@ -35,6 +35,7 @@ import { Card, CardAction } from '@/components/ui/card';
 import Link from 'next/link';
 import { AnimatePresence, motion, LayoutGroup } from 'framer-motion';
 import { ContextMenuRow } from '@/components/ui/context-menu-row';
+import { toast } from 'sonner';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -80,14 +81,21 @@ export function DataTable<TData extends { id: number }, TValue>({
   const handleDelete = async (id: number) => {
     if (!onDelete) return;
     
+    // Validate that the ID is a number to prevent NaN issues
+    if (id === undefined || id === null || isNaN(Number(id))) {
+      console.error('Invalid ID for deletion:', id);
+      toast.error('Error: Invalid ID for item deletion');
+      return;
+    }
+    
     // Mark this row as deleting
     setDeletingId(id);
     
     // Allow time for the exit animation
     setTimeout(async () => {
       try {
-        // Actually delete the item after animation
-        await onDelete(id);
+        // Actually delete the item after animation - ensure we're passing a valid number
+        await onDelete(Number(id));
       } catch (error) {
         console.error('Error deleting item:', error);
       } finally {
