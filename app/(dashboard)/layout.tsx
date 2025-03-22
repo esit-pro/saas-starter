@@ -2,6 +2,7 @@ import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { ModernSidebar } from '@/components/modern-sidebar';
+import { Toaster } from '@/components/ui/sonner';
 
 export default async function DashboardLayout({
   children,
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }

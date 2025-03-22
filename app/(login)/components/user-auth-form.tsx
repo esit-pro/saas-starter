@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { signIn, signUp } from '../actions';
 import { ActionState } from '@/lib/auth/middleware';
 import { useRouter } from 'next/navigation';
+import { useAuthNotification, type AuthMessageKey } from '@/lib/context/auth-notification-context';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
   mode?: 'signin' | 'signup';
@@ -26,6 +27,7 @@ export function UserAuthForm({
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const { setMessageKey } = useAuthNotification();
   
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
@@ -46,6 +48,16 @@ export function UserAuthForm({
   const [resendingCode, setResendingCode] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
+
+  // Update notification context when auth state changes
+  useEffect(() => {
+    if (state.messageKey) {
+      setMessageKey(state.messageKey as AuthMessageKey);
+    } else if (state.error) {
+      // If there's an error but no message key, clear the notification
+      setMessageKey(null);
+    }
+  }, [state, setMessageKey]);
 
   // Handle 2FA verification
   const handleVerifyTwoFactor = async () => {

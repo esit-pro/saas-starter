@@ -6,7 +6,6 @@ import { getUser } from '@/lib/db/queries';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeScript } from '@/components/theme-script';
 import { ThemeEffect } from './theme-effect';
-import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
   title: 'ESIT Service Management',
@@ -39,7 +38,6 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="dark">
           <ThemeScript />
           <UserProvider userPromise={userPromise}>{children}</UserProvider>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>

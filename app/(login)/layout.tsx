@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { AuthNotificationProvider } from '@/lib/context/auth-notification-context';
 
 export default function AuthLayout({
   children,
@@ -8,28 +11,25 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <div className="flex min-h-screen flex-col">
-        {/* Mobile view */}
-        <div className="flex-grow md:hidden">
-          <header className="absolute right-6 top-6 z-10">
+    <AuthNotificationProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <div className="flex min-h-screen flex-col">
+          {/* Header for mobile/tablet - fixed positioning */}
+          <header className="fixed right-6 top-6 z-50 md:hidden">
             <ThemeToggle />
           </header>
-          <div className="flex h-screen flex-col items-center justify-center px-6 py-10">
+          
+          {/* Content area - centered for all screen sizes */}
+          <div className="flex-grow flex items-center justify-center">
             {children}
           </div>
         </div>
-        
-        {/* Desktop view - children handles the layout */}
-        <div className="hidden md:block md:flex-grow">
-          {children}
-        </div>
-      </div>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthNotificationProvider>
   );
 }
