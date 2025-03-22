@@ -17,8 +17,8 @@ export default function SignUpPage() {
   return (
     <Suspense>
       <div className="w-full h-full flex justify-center items-center">
-        {/* Responsive container */}
-        <div className="w-full max-w-[1200px] min-h-[600px] flex flex-col lg:flex-row lg:h-screen">
+        {/* Remove max-width constraint to allow full-width spanning */}
+        <div className="w-full min-h-[600px] flex flex-col lg:flex-row lg:h-screen">
           {/* Theme toggle and sign in link in top right for medium/large screens */}
           <div className="absolute right-8 top-8 z-50 hidden md:flex items-center gap-4">
             <ThemeToggle />
@@ -33,20 +33,23 @@ export default function SignUpPage() {
           </div>
           
           {/* Left side - brand (visible on lg screens) */}
-          <div className="hidden lg:flex lg:w-1/2 relative flex-col bg-transparent p-10 text-white dark:border-r">
-            <div className="relative z-20 flex items-center text-lg font-medium">
-              <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-                <span className="text-primary-foreground font-bold text-sm">E</span>
+          <div className="hidden lg:block lg:w-1/2 relative flex-col bg-transparent p-10 text-white dark:border-r">
+            {/* Add a max-width container inside for the content */}
+            <div className="flex flex-col h-full ml-auto max-w-[600px] pr-16">
+              <div className="relative z-20 flex items-center text-lg font-medium">
+                <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
+                  <span className="text-primary-foreground font-bold text-sm">E</span>
+                </div>
+                ESIT
               </div>
-              ESIT
-            </div>
-            <div className="relative z-20 mt-auto">
-              <blockquote className="space-y-2">
-                <p className="text-lg">
-                  &ldquo;Implementing this service desk platform was one of the best decisions we made. Our customer satisfaction has increased dramatically and our resolution times have been cut in half.&rdquo;
-                </p>
-                <footer className="text-sm">Michael Chen, Support Manager</footer>
-              </blockquote>
+              <div className="relative z-20 mt-auto">
+                <blockquote className="space-y-2">
+                  <p className="text-lg">
+                    &ldquo;Implementing this service desk platform was one of the best decisions we made. Our customer satisfaction has increased dramatically and our resolution times have been cut in half.&rdquo;
+                  </p>
+                  <footer className="text-sm">Michael Chen, Support Manager</footer>
+                </blockquote>
+              </div>
             </div>
           </div>
           
