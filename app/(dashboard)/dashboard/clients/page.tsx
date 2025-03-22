@@ -283,7 +283,7 @@ function ClientDetailPane({
                     <Input
                       value={displayData.name}
                       onChange={(e) => handleChange('name', e.target.value)}
-                      className="text-2xl font-bold h-auto py-2 px-3 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                      className="text-2xl font-bold h-auto py-2 px-3 bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30"
                     />
                     <div className="flex gap-3 justify-end mt-1">
                       <Button 
@@ -369,7 +369,7 @@ function ClientDetailPane({
         {/* Client details cards */}
         {activeTab === 'details' && (
           <>
-            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${isEditing ? 'rounded-lg p-4 bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6`}>
               <div className={`border dark:border-border rounded-lg p-5`}>
                 <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
                   Contact Information
@@ -384,7 +384,7 @@ function ClientDetailPane({
                           type="email"
                           value={displayData.email || ''}
                           onChange={(e) => handleChange('email', e.target.value)}
-                          className="h-8 border-blue-300 dark:border-blue-700"
+                          className="h-8 bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30"
                         />
                       ) : (
                         <div className="font-medium text-gray-900 dark:text-foreground">
@@ -407,7 +407,7 @@ function ClientDetailPane({
                       <Input
                         value={displayData.contactName || ''}
                         onChange={(e) => handleChange('contactName', e.target.value)}
-                        className="h-8 border-blue-300 dark:border-blue-700 mt-1"
+                        className="h-8 bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-1"
                       />
                     ) : (
                       <span className="font-medium text-gray-900 dark:text-foreground">
@@ -428,7 +428,7 @@ function ClientDetailPane({
                         value={displayData.phone || ''}
                         onChange={(e) => handleChange('phone', e.target.value)}
                         placeholder="Enter phone number"
-                        className="h-8 border-blue-300 dark:border-blue-700 mt-1"
+                        className="h-8 bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-1"
                       />
                     ) : (
                       <span className="font-medium text-gray-900 dark:text-foreground">
@@ -441,7 +441,7 @@ function ClientDetailPane({
             </div>
 
             {/* Address Section */}
-            <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+            <div className={`border dark:border-border rounded-lg p-5`}>
               <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
                 Address
               </h3>
@@ -450,7 +450,7 @@ function ClientDetailPane({
                   value={displayData.address || ''}
                   onChange={(e) => handleChange('address', e.target.value)}
                   placeholder="Enter the client's address"
-                  className="min-h-[80px] border-blue-300 dark:border-blue-700 mt-2"
+                  className="min-h-[80px] bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-2"
                 />
               ) : (
                 <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
@@ -460,7 +460,7 @@ function ClientDetailPane({
             </div>
 
             {/* Notes Section */}
-            <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+            <div className={`border dark:border-border rounded-lg p-5`}>
               <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
                 Notes
               </h3>
@@ -469,7 +469,7 @@ function ClientDetailPane({
                   value={displayData.notes || ''}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   placeholder="Enter notes about this client"
-                  className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-2"
+                  className="min-h-[120px] bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-2"
                 />
               ) : (
                 <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">

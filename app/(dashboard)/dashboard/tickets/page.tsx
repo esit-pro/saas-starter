@@ -312,9 +312,9 @@ function TicketDetailPane({
                 {isEditing ? (
                   <div className="flex flex-col gap-3 w-full max-w-xl">
                     <Input
-                      value={displayData.title || ''}
+                      value={displayData.title}
                       onChange={(e) => handleChange('title', e.target.value)}
-                      className="text-2xl font-bold h-auto py-2 px-3 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                      className="text-2xl font-bold h-auto py-2 px-3 bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30"
                     />
                     <div className="flex gap-3 justify-end mt-1">
                       <Button 
@@ -356,7 +356,7 @@ function TicketDetailPane({
                     <select
                       value={displayData.status}
                       onChange={(e) => handleChange('status', e.target.value)}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium capitalize bg-white dark:bg-zinc-800 border border-blue-300 dark:border-blue-700 min-w-[140px]"
+                      className="px-3 py-1.5 rounded-full text-sm font-medium capitalize bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 min-w-[140px]"
                     >
                       <option value="open">Open</option>
                       <option value="in-progress">In Progress</option>
@@ -394,7 +394,7 @@ function TicketDetailPane({
                       <select
                         value={displayData.clientId}
                         onChange={(e) => handleChange('clientId', Number(e.target.value))}
-                        className="bg-white dark:bg-zinc-800 rounded border text-sm border-blue-300 dark:border-blue-700 p-1.5 min-w-[180px]"
+                        className="bg-primary/5 dark:bg-primary/5 rounded border text-sm border-primary/30 dark:border-primary/30 p-1.5 min-w-[180px]"
                       >
                         {clients.map(client => (
                           <option key={client.id} value={client.id}>{client.name}</option>
@@ -417,7 +417,7 @@ function TicketDetailPane({
         </div>
 
         {/* Ticket details cards */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${isEditing ? 'rounded-lg p-4 bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6`}>
           <div className={`border dark:border-border rounded-lg p-5`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Priority
@@ -427,7 +427,7 @@ function TicketDetailPane({
                 <select
                   value={displayData.priority}
                   onChange={(e) => handleChange('priority', e.target.value)}
-                  className="w-full bg-white dark:bg-zinc-800 rounded border p-2 border-blue-300 dark:border-blue-700 mt-1"
+                  className="w-full bg-primary/5 dark:bg-primary/5 rounded border p-2 border-primary/30 dark:border-primary/30 mt-1"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -463,7 +463,7 @@ function TicketDetailPane({
                   value={displayData.category || ''}
                   onChange={(e) => handleChange('category', e.target.value)}
                   placeholder="e.g., Hardware, Software, Network"
-                  className="border-blue-300 dark:border-blue-700 mt-1"
+                  className="bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-1"
                 />
               ) : (
                 <span className="font-medium text-gray-900 dark:text-foreground">
@@ -476,7 +476,7 @@ function TicketDetailPane({
 
         {/* Description Section */}
         {(displayData.description || isEditing) && (
-          <div className={`border dark:border-border rounded-lg p-5 ${isEditing ? 'bg-gray-50 dark:bg-zinc-800/30' : ''}`}>
+          <div className={`border dark:border-border rounded-lg p-5`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Description
             </h3>
@@ -485,7 +485,7 @@ function TicketDetailPane({
                 value={displayData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Enter detailed description of the issue"
-                className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-2"
+                className="min-h-[120px] bg-primary/5 dark:bg-primary/5 border-primary/30 dark:border-primary/30 mt-2"
               />
             ) : (
               <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
