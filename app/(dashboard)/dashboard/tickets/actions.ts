@@ -252,7 +252,32 @@ export const deleteTicket = validatedActionWithUser(
         return { error: 'Ticket not found or not authorized to delete' };
       }
 
-      // Soft delete by setting the deletedAt timestamp
+      // Check for billable unbilled time entries and expenses - but just for logging/notification
+      const billableTimeEntries = await db
+        .select()
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.ticketId, data.id),
+            eq(timeEntries.billable, true),
+            eq(timeEntries.billed, false),
+            isNull(timeEntries.deletedAt)
+          )
+        );
+
+      const billableExpenses = await db
+        .select()
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.ticketId, data.id),
+            eq(expenses.billable, true),
+            eq(expenses.billed, false),
+            isNull(expenses.deletedAt)
+          )
+        );
+
+      // Soft delete the ticket by setting the deletedAt timestamp
       // This preserves all relationships while hiding the ticket from active views
       const [deletedTicket] = await db
         .update(serviceTickets)
@@ -263,12 +288,23 @@ export const deleteTicket = validatedActionWithUser(
         .where(eq(serviceTickets.id, data.id))
         .returning();
 
+      // Log the activity
       await logTicketActivity(
         teamId,
         user.id,
-        ActivityType.TICKET_UPDATED,  // Using updated as there's no specific delete activity type
+        ActivityType.TICKET_DELETED,
         deletedTicket.id
       );
+
+      // Return information about associated items
+      if (billableTimeEntries.length > 0 || billableExpenses.length > 0) {
+        return { 
+          success: 'Ticket deleted successfully. Note that there are still unbilled time entries and/or expenses associated with this ticket that can be billed to the client.',
+          hasUnbilledItems: true,
+          unbilledTimeEntries: billableTimeEntries.length,
+          unbilledExpenses: billableExpenses.length
+        };
+      }
 
       return { success: 'Ticket deleted successfully' };
     } catch (error) {
@@ -805,5 +841,118 @@ export async function getTeamMembersForAssignment(_formData?: FormData) {
   } catch (error) {
     console.error('Failed to fetch team members:', error);
     return { error: 'Failed to fetch team members. Please try again.', members: [] };
+  }
+}
+
+// Get all unbilled billable time entries and expenses for a team
+// This includes entries associated with deleted tickets
+export async function getUnbilledItemsForTeam(_formData?: FormData) {
+  const user = await getUser();
+  if (!user) return { error: 'User not authenticated' };
+
+  let userTeamInfo = await getUserWithTeam(user.id);
+  if (!userTeamInfo?.teamId) {
+    return { error: 'User is not part of a team' };
+  }
+
+  try {
+    const teamId = userTeamInfo.teamId;
+    
+    // Get all unbilled billable time entries
+    const timeEntriesData = await db
+      .select({
+        timeEntry: timeEntries,
+        user: {
+          id: users.id,
+          name: users.name,
+        },
+        ticket: {
+          id: serviceTickets.id,
+          title: serviceTickets.title,
+          deletedAt: serviceTickets.deletedAt
+        },
+        client: {
+          id: clients.id,
+          name: clients.name
+        }
+      })
+      .from(timeEntries)
+      .leftJoin(users, eq(timeEntries.userId, users.id))
+      .leftJoin(serviceTickets, eq(timeEntries.ticketId, serviceTickets.id))
+      .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+      .where(
+        and(
+          eq(timeEntries.teamId, teamId),
+          eq(timeEntries.billable, true),
+          eq(timeEntries.billed, false),
+          isNull(timeEntries.deletedAt)
+        )
+      )
+      .orderBy(desc(timeEntries.startTime));
+
+    // Get all unbilled billable expenses
+    const expensesData = await db
+      .select({
+        expense: expenses,
+        user: {
+          id: users.id,
+          name: users.name,
+        },
+        ticket: {
+          id: serviceTickets.id,
+          title: serviceTickets.title,
+          deletedAt: serviceTickets.deletedAt
+        },
+        client: {
+          id: clients.id,
+          name: clients.name
+        }
+      })
+      .from(expenses)
+      .leftJoin(users, eq(expenses.userId, users.id))
+      .leftJoin(serviceTickets, eq(expenses.ticketId, serviceTickets.id))
+      .leftJoin(clients, eq(expenses.clientId, clients.id))
+      .where(
+        and(
+          eq(expenses.teamId, teamId),
+          eq(expenses.billable, true),
+          eq(expenses.billed, false),
+          isNull(expenses.deletedAt)
+        )
+      )
+      .orderBy(desc(expenses.createdAt));
+
+    // Process the results
+    const formattedTimeEntries = timeEntriesData.map(item => ({
+      ...item.timeEntry,
+      user: item.user,
+      ticket: item.ticket ? {
+        ...item.ticket,
+        isDeleted: item.ticket.deletedAt !== null
+      } : null,
+      client: item.client
+    }));
+
+    const formattedExpenses = expensesData.map(item => ({
+      ...item.expense,
+      user: item.user,
+      ticket: item.ticket ? {
+        ...item.ticket,
+        isDeleted: item.ticket.deletedAt !== null
+      } : null,
+      client: item.client
+    }));
+
+    return { 
+      timeEntries: formattedTimeEntries,
+      expenses: formattedExpenses
+    };
+  } catch (error) {
+    console.error('Failed to fetch unbilled items:', error);
+    return { 
+      error: 'Failed to fetch unbilled items. Please try again.',
+      timeEntries: [],
+      expenses: []
+    };
   }
 }

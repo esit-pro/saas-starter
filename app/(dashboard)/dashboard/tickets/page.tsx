@@ -1033,25 +1033,51 @@ export default function TicketsPage() {
   
   // Handler for deleting a ticket
   const handleDeleteTicket = async (id: number) => {
-    // In a real app, you'd call an API to delete the ticket
-    // For this demo, we'll just remove it from the state
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Call the server action to delete the ticket
+      const result = await deleteTicket({ id }, new FormData());
       
-      // Remove from all ticket lists
-      setTickets(tickets.filter(ticket => ticket.id !== id));
-      setActiveTickets(activeTickets.filter(ticket => ticket.id !== id));
-      setCompletedTickets(completedTickets.filter(ticket => ticket.id !== id));
-      
-      // If this is the currently selected ticket, clear the selection
-      if (selectedTicket && selectedTicket.id === id) {
-        setSelectedTicket(null);
+      if (result.error) {
+        toast.error(result.error);
+        return Promise.reject(result.error);
       }
       
-      return Promise.resolve();
+      if (result.success) {
+        // Remove from all ticket lists
+        setTickets(tickets.filter(ticket => ticket.id !== id));
+        setActiveTickets(activeTickets.filter(ticket => ticket.id !== id));
+        setCompletedTickets(completedTickets.filter(ticket => ticket.id !== id));
+        
+        // If this is the currently selected ticket, clear the selection
+        if (selectedTicket && selectedTicket.id === id) {
+          setSelectedTicket(null);
+        }
+        
+        // If the ticket had unbilled items, show a more detailed success message
+        if (result.hasUnbilledItems) {
+          const timeEntriesMsg = result.unbilledTimeEntries > 0 
+            ? `${result.unbilledTimeEntries} time ${result.unbilledTimeEntries === 1 ? 'entry' : 'entries'}` 
+            : '';
+          const expensesMsg = result.unbilledExpenses > 0 
+            ? `${result.unbilledExpenses} ${result.unbilledExpenses === 1 ? 'expense' : 'expenses'}` 
+            : '';
+          const andMsg = timeEntriesMsg && expensesMsg ? ' and ' : '';
+          
+          toast.success(
+            `Ticket deleted. You still have ${timeEntriesMsg}${andMsg}${expensesMsg} that can be billed to the client.`,
+            { duration: 6000 }
+          );
+        } else {
+          toast.success("Ticket deleted successfully");
+        }
+        
+        return Promise.resolve();
+      }
+      
+      return Promise.reject("Failed to delete ticket");
     } catch (error) {
       console.error('Error deleting ticket:', error);
+      toast.error('Failed to delete ticket');
       return Promise.reject(error);
     }
   };
