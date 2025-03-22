@@ -375,11 +375,14 @@ async function logDeleteActivity(
       deleted: entityData
     }
   });
-} 
+}
 
-export default {
+// Create a named export object
+const auditTrailUtils = {
   createWithAudit,
   updateWithAudit,
   softDeleteWithAudit,
   hasColumn,
 };
+
+export default auditTrailUtils;
