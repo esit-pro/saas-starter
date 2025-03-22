@@ -133,17 +133,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     
-    // Store the code first
-    await db.insert(verificationCodes).values({
-      userId: foundUser.id,
-      code,
-      type: '2fa_login',
-      expiresAt,
-    });
-    
+    // First attempt to send the code before storing it
+    let sent = false;
     try {
-      // Then attempt to send it
-      const sent = await send2FACode(foundUser.phoneNumber, code);
+      sent = await send2FACode(foundUser.phoneNumber, code);
+      
       if (!sent) {
         console.error(`Failed to send 2FA code to user ${foundUser.id} with phone ${foundUser.phoneNumber}`);
         
@@ -162,6 +156,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
           email,
         };
       }
+      
+      // Only store the code if sending was successful
+      await db.insert(verificationCodes).values({
+        userId: foundUser.id,
+        code,
+        type: '2fa_login',
+        expiresAt,
+      });
+      
     } catch (error) {
       console.error('Error in 2FA code sending:', error);
       
@@ -173,6 +176,9 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
         email,
       };
     }
+    
+    // Log success if we reach here
+    console.log(`Successfully sent 2FA code to user ${foundUser.id}`);
     
     // Return success but with 2FA required flag
     return {

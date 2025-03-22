@@ -118,8 +118,8 @@ export function UserAuthForm({
         console.error("2FA verification error:", data.error || "Unknown error");
       }
     } catch (error) {
-      setTwoFactorError("Network error. Please check your connection and try again.");
       console.error("2FA verification error:", error);
+      setTwoFactorError("Network error. Please check your connection and try again.");
     } finally {
       setVerifyingCode(false);
     }

@@ -80,9 +80,15 @@ export async function POST(request: NextRequest) {
     }
     
     // Mark the code as used
-    await db.update(verificationCodes)
-      .set({ used: true })
-      .where(eq(verificationCodes.id, verificationCode.id));
+    try {
+      await db.update(verificationCodes)
+        .set({ used: true })
+        .where(eq(verificationCodes.id, verificationCode.id));
+      console.log(`Marked verification code ${verificationCode.id} as used`);
+    } catch (updateError) {
+      console.error('Error marking verification code as used:', updateError);
+      // Continue despite this error - this shouldn't block authentication
+    }
     
     // Create session for the user
     try {
@@ -95,25 +101,33 @@ export async function POST(request: NextRequest) {
       await setSession(user);
       console.log(`Successfully created session for user ID: ${user.id}`);
       
-      // Find the user's team for activity logging
-      const [userWithTeam] = await db
-        .select({
-          team: {
-            id: teams.id,
-          },
-        })
-        .from(users)
-        .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-        .leftJoin(teams, eq(teamMembers.teamId, teams.id))
-        .where(eq(users.id, user.id))
-        .limit(1);
+      let teamId = null;
+      try {
+        // Find the user's team for activity logging
+        const [userWithTeam] = await db
+          .select({
+            team: {
+              id: teams.id,
+            },
+          })
+          .from(users)
+          .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+          .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+          .where(eq(users.id, user.id))
+          .limit(1);
+          
+        teamId = userWithTeam?.team?.id || null;
+      } catch (teamError) {
+        console.error('Error finding user team:', teamError);
+        // Continue anyway - this is not critical
+      }
       
       // Log the sign in activity
-      if (userWithTeam?.team?.id) {
+      if (teamId) {
         try {
           // Only use fields that are defined in the schema
           await db.insert(activityLogs).values({
-            teamId: userWithTeam.team.id,
+            teamId: teamId,
             userId: user.id,
             action: ActivityType.SIGN_IN,
             // Safely add IP address if available

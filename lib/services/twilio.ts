@@ -84,6 +84,8 @@ function initTwilio() {
     console.log(`Using Twilio phone number: ${normalizedTwilioPhoneNumber}`);
   } else {
     console.error('Missing TWILIO_PHONE_NUMBER in environment variables');
+    configWarningLogged = true;
+    configStatus.configWarningLogged = true;
   }
   
   try {
@@ -93,6 +95,8 @@ function initTwilio() {
       twilio = require('twilio');
     } catch (packageError) {
       console.error('Failed to require twilio package. Is it installed?', packageError);
+      configWarningLogged = true;
+      configStatus.configWarningLogged = true;
       return isDevelopment;
     }
     
@@ -109,6 +113,8 @@ function initTwilio() {
           console.log('Testing Twilio credentials...');
         } catch (credentialError) {
           console.error('Twilio credentials appear to be invalid:', credentialError);
+          configWarningLogged = true;
+          configStatus.configWarningLogged = true;
           return false;
         }
       }
@@ -116,10 +122,14 @@ function initTwilio() {
       return true;
     } catch (clientError) {
       console.error('Failed to create Twilio client:', clientError);
+      configWarningLogged = true;
+      configStatus.configWarningLogged = true;
       return isDevelopment;
     }
   } catch (error) {
     console.error('Unexpected error initializing Twilio:', error);
+    configWarningLogged = true;
+    configStatus.configWarningLogged = true;
     // Allow fallback in development
     return isDevelopment;
   }
@@ -306,7 +316,7 @@ export async function send2FACode(
     }
     
     return false;
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Unexpected error sending 2FA SMS:', error);
     // Log more specific details about Twilio errors
     const twilioError = error as TwilioError;
