@@ -311,7 +311,7 @@ function TicketDetailPane({
                   <Input
                     value={displayData.title || ''}
                     onChange={(e) => handleChange('title', e.target.value)}
-                    className="text-2xl font-bold h-auto py-1 px-2"
+                    className="text-2xl font-bold h-auto py-1 px-2 bg-blue-50/30 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
                   />
                 ) : (
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{displayData.title}</h2>
@@ -388,7 +388,7 @@ function TicketDetailPane({
                       <select
                         value={displayData.clientId}
                         onChange={(e) => handleChange('clientId', Number(e.target.value))}
-                        className="bg-white dark:bg-zinc-800 rounded border text-sm"
+                        className="bg-white dark:bg-zinc-800 rounded border text-sm border-blue-300 dark:border-blue-700 p-1"
                       >
                         {clients.map(client => (
                           <option key={client.id} value={client.id}>{client.name}</option>
@@ -415,14 +415,14 @@ function TicketDetailPane({
           <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Priority
-              {isEditing && <span className="ml-2 text-xs">(Editing)</span>}
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             <div className="flex items-center">
               {isEditing ? (
                 <select
                   value={displayData.priority}
                   onChange={(e) => handleChange('priority', e.target.value)}
-                  className="w-full bg-white dark:bg-zinc-800 rounded border p-2"
+                  className="w-full bg-white dark:bg-zinc-800 rounded border p-2 border-blue-300 dark:border-blue-700 mt-1"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -453,7 +453,7 @@ function TicketDetailPane({
               {isEditing ? (
                 <div className="flex items-center justify-between">
                   <span>Category</span>
-                  {isEditing && <span className="text-xs">(Editing)</span>}
+                  {isEditing && <span className="text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
                 </div>
               ) : (
                 "Category"
@@ -465,6 +465,7 @@ function TicketDetailPane({
                   value={displayData.category || ''}
                   onChange={(e) => handleChange('category', e.target.value)}
                   placeholder="e.g., Hardware, Software, Network"
+                  className="border-blue-300 dark:border-blue-700 mt-1"
                 />
               ) : (
                 <span className="font-medium text-gray-900 dark:text-foreground">
@@ -480,14 +481,14 @@ function TicketDetailPane({
           <div className={`border dark:border-border rounded-lg p-4`}>
             <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
               Description
-              {isEditing && <span className="ml-2 text-xs">(Editing)</span>}
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
             </h3>
             {isEditing ? (
               <Textarea
                 value={displayData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Enter detailed description of the issue"
-                className="min-h-[120px]"
+                className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-1"
               />
             ) : (
               <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">

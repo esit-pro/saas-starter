@@ -370,7 +370,7 @@ function ClientDetailPane({
                   <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Email</div>
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Email</div>
                   {isEditing ? (
                     <Input
                       type="email"
@@ -392,7 +392,7 @@ function ClientDetailPane({
                   <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Phone</div>
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Phone</div>
                   {isEditing ? (
                     <Input
                       value={displayData.phone || ''}
@@ -412,7 +412,7 @@ function ClientDetailPane({
                   <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Contact Person</div>
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Contact Person</div>
                   {isEditing ? (
                     <Input
                       value={displayData.contactName || ''}
@@ -428,7 +428,10 @@ function ClientDetailPane({
           </div>
           
           <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Account Details</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+              Account Details
+              {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+            </h3>
             <div className="space-y-3">
               <div className="flex items-center">
                 <div className="w-8">
@@ -457,13 +460,13 @@ function ClientDetailPane({
                   <FileIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 dark:text-muted-foreground">Address</div>
+                  <div className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Address</div>
                   {isEditing ? (
                     <Textarea
                       value={displayData.address || ''}
                       onChange={(e) => handleChange('address', e.target.value)}
                       placeholder="Enter address"
-                      className="min-h-[60px] border-blue-300 dark:border-blue-700"
+                      className="min-h-[60px] border-blue-300 dark:border-blue-700 mt-1"
                     />
                   ) : (
                     <div className="font-medium text-gray-900 dark:text-foreground">
@@ -478,13 +481,16 @@ function ClientDetailPane({
 
         {/* Notes Section */}
         <div className={`border dark:border-border rounded-lg p-4 ${isEditing ? 'bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-200 dark:border-blue-900/40' : ''}`}>
-          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3">Notes</h3>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-muted-foreground mb-3 flex items-center">
+            Notes
+            {isEditing && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(Editing)</span>}
+          </h3>
           {isEditing ? (
             <Textarea
               value={displayData.notes || ''}
               onChange={(e) => handleChange('notes', e.target.value)}
               placeholder="Enter notes about this client"
-              className="min-h-[120px] border-blue-300 dark:border-blue-700"
+              className="min-h-[120px] border-blue-300 dark:border-blue-700 mt-1"
             />
           ) : (
             <div className="text-gray-900 dark:text-foreground whitespace-pre-wrap">
