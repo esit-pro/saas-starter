@@ -5,8 +5,19 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
-// Initialize Twilio client
-const client = accountSid && authToken ? require('twilio')(accountSid, authToken) : null;
+// Improved Twilio client initialization
+let client: any = null;
+if (accountSid && authToken) {
+  try {
+    const twilio = require('twilio');
+    client = twilio(accountSid, authToken);
+    console.log('Twilio client initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Twilio client:', error);
+  }
+} else {
+  console.error('Missing Twilio credentials in environment variables');
+}
 
 // Function to generate a random 6-digit code
 export function generateVerificationCode(): string {
@@ -19,7 +30,7 @@ export async function sendVerificationSMS(
   code: string
 ): Promise<boolean> {
   if (!client || !twilioPhoneNumber) {
-    console.error('Twilio is not configured properly');
+    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
     return false;
   }
 
@@ -44,7 +55,7 @@ export async function send2FACode(
   code: string
 ): Promise<boolean> {
   if (!client || !twilioPhoneNumber) {
-    console.error('Twilio is not configured properly');
+    console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
     return false;
   }
 

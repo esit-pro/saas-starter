@@ -107,6 +107,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   // Check if 2FA is enabled
   if (foundUser.twoFactorEnabled) {
+    // Check if user has a phone number for 2FA
+    if (!foundUser.phoneNumber) {
+      console.error(`User ID ${foundUser.id} has 2FA enabled but no phone number`);
+      return {
+        error: 'Your account requires two-factor authentication, but no phone number is set up. Please contact support.',
+        email,
+      };
+    }
+    
     // Check rate limiting before generating a new code
     const canGenerate = await canGenerateCode(foundUser.id, '2fa_login');
     if (!canGenerate) {
@@ -120,6 +129,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     
+    // Store the code first
     await db.insert(verificationCodes).values({
       userId: foundUser.id,
       code,
@@ -127,10 +137,22 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       expiresAt,
     });
     
-    if (foundUser.phoneNumber) {
-      await send2FACode(foundUser.phoneNumber, code);
-    } else {
-      console.error('User has 2FA enabled but no phone number');
+    try {
+      // Then attempt to send it
+      const sent = await send2FACode(foundUser.phoneNumber, code);
+      if (!sent) {
+        console.error(`Failed to send 2FA code to user ${foundUser.id} with phone ${foundUser.phoneNumber}`);
+        return {
+          error: 'We were unable to send your verification code. Please try again or contact support.',
+          email,
+        };
+      }
+    } catch (error) {
+      console.error('Error in 2FA code sending:', error);
+      return {
+        error: 'An error occurred while sending your verification code. Please try again.',
+        email,
+      };
     }
     
     // Return success but with 2FA required flag

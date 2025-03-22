@@ -70,12 +70,15 @@ export async function POST(request: NextRequest) {
     const sent = await send2FACode(user.phoneNumber, code);
     
     if (!sent) {
-      return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 });
+      console.error(`Failed to send 2FA code to user ${user.id} with phone ${user.phoneNumber}`);
+      return NextResponse.json({ 
+        error: 'Failed to send verification code. Please try again or contact support.'
+      }, { status: 500 });
     }
     
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error resending 2FA code:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error. Please try again later.' }, { status: 500 });
   }
 } 
