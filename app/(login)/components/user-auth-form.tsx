@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { signIn, signUp } from '../actions';
 import { ActionState } from '@/lib/auth/middleware';
 import { useRouter } from 'next/navigation';
-import { useAuthNotificationStore, type AuthMessageKey } from '@/lib/store/authNotificationStore';
+import { useAuthNotification, type AuthMessageKey } from '@/lib/context/auth-notification-context';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
   mode?: 'signin' | 'signup';
@@ -27,7 +27,7 @@ export function UserAuthForm({
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
-  const { setMessageKey } = useAuthNotificationStore();
+  const { setMessageKey } = useAuthNotification();
   
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
@@ -49,7 +49,7 @@ export function UserAuthForm({
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
 
-  // Update notification store when auth state changes
+  // Update notification context when auth state changes
   useEffect(() => {
     if (state.messageKey) {
       setMessageKey(state.messageKey as AuthMessageKey);

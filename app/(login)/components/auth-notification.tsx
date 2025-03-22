@@ -2,10 +2,10 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { useAuthNotificationStore } from '@/lib/store/authNotificationStore';
+import { useAuthNotification } from '@/lib/context/auth-notification-context';
 
 export default function AuthNotification() {
-  const { message } = useAuthNotificationStore();
+  const { message } = useAuthNotification();
 
   if (!message) return null;
 
