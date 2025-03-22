@@ -5,6 +5,9 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
+// Development mode flag
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Track if we've already warned about configuration
 let configWarningLogged = false;
 
@@ -12,18 +15,27 @@ let configWarningLogged = false;
 let client: any = null;
 let twilioInitialized = false;
 
+// Store generated codes in development mode
+const devModeCodes: Record<string, string> = {};
+
 // Lazy initialization of Twilio to prevent startup issues
 function initTwilio() {
-  if (twilioInitialized) return;
+  if (twilioInitialized) return true;
   
   twilioInitialized = true;
   
   if (!accountSid || !authToken || !twilioPhoneNumber) {
     if (!configWarningLogged) {
-      console.error('Missing Twilio configuration. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in your .env file.');
+      if (isDevelopment) {
+        console.warn('Running in development mode with Twilio fallback. SMS codes will be logged to console instead of sent.');
+      } else {
+        console.error('Missing Twilio configuration. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in your .env file.');
+      }
       configWarningLogged = true;
     }
-    return false;
+    
+    // Allow fallback in development
+    return isDevelopment;
   }
   
   try {
@@ -33,7 +45,8 @@ function initTwilio() {
     return true;
   } catch (error) {
     console.error('Failed to initialize Twilio client:', error);
-    return false;
+    // Allow fallback in development
+    return isDevelopment;
   }
 }
 
@@ -66,12 +79,25 @@ export async function sendVerificationSMS(
   code: string
 ): Promise<boolean> {
   // Initialize Twilio if needed
-  if (!initTwilio()) {
+  const twilioReady = initTwilio();
+  
+  if (!twilioReady && !isDevelopment) {
     return false;
   }
   
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
   
+  // Development fallback - just log the code
+  if (isDevelopment && (!client || !twilioPhoneNumber)) {
+    console.log(`\n==== DEVELOPMENT MODE: SMS CODE ====`);
+    console.log(`📱 Verification code for ${normalizedPhone}: ${code}`);
+    console.log(`====================================\n`);
+    
+    // Store the code for reference
+    devModeCodes[normalizedPhone] = code;
+    return true;
+  }
+
   if (!client || !twilioPhoneNumber) {
     console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
     return false;
@@ -96,7 +122,7 @@ export async function sendVerificationSMS(
       console.error(`Twilio error message: ${error.message}`);
     }
     if (error.moreInfo) {
-      console.error(`Twilio more info: ${error.moreInfo}`);
+      console.error(`Twilio error message: ${error.moreInfo}`);
     }
     return false;
   }
@@ -108,12 +134,25 @@ export async function send2FACode(
   code: string
 ): Promise<boolean> {
   // Initialize Twilio if needed
-  if (!initTwilio()) {
+  const twilioReady = initTwilio();
+  
+  if (!twilioReady && !isDevelopment) {
     return false;
   }
   
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
   
+  // Development fallback - just log the code
+  if (isDevelopment && (!client || !twilioPhoneNumber)) {
+    console.log(`\n==== DEVELOPMENT MODE: 2FA CODE ====`);
+    console.log(`🔐 Login verification code for ${normalizedPhone}: ${code}`);
+    console.log(`====================================\n`);
+    
+    // Store the code for reference
+    devModeCodes[normalizedPhone] = code;
+    return true;
+  }
+
   if (!client || !twilioPhoneNumber) {
     console.error('Twilio is not configured properly - client:', !!client, 'phone:', !!twilioPhoneNumber);
     return false;
@@ -138,7 +177,7 @@ export async function send2FACode(
       console.error(`Twilio error message: ${error.message}`);
     }
     if (error.moreInfo) {
-      console.error(`Twilio more info: ${error.moreInfo}`);
+      console.error(`Twilio error message: ${error.moreInfo}`);
     }
     return false;
   }
