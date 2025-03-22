@@ -8,21 +8,10 @@ import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { UserAuthForm } from '../components/user-auth-form';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-
-// Define allowed messages to prevent arbitrary content
-const ALLOWED_MESSAGES: Record<string, string> = {
-  'registration-disabled': 'Registration is temporarily disabled for private testing',
-  'invalid-credentials': 'Invalid email or password',
-  'account-locked': 'Your account has been locked. Please contact support',
-  'email-verification': 'Please verify your email address before signing in',
-};
+import AuthNotification from '../components/auth-notification';
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
-  const messageKey = searchParams.get('message');
-  const message = messageKey ? ALLOWED_MESSAGES[messageKey] : null;
   
   return (
     <>
@@ -35,12 +24,7 @@ export default function SignInContent() {
           </p>
         </div>
         
-        {message && (
-          <Alert variant="destructive" className="mx-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
+        <AuthNotification />
         
         <UserAuthForm mode="signin" className="w-full px-4" />
         <div className="px-8 text-center text-sm text-muted-foreground">
@@ -98,12 +82,7 @@ export default function SignInContent() {
               </p>
             </div>
             
-            {message && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            )}
+            <AuthNotification />
             
             <UserAuthForm mode="signin" />
             <p className="px-8 text-center text-sm text-muted-foreground">

@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation';
 export type ActionState = {
   error?: string;
   success?: string;
+  requiresTwoFactor?: boolean;
+  messageKey?: string;
   [key: string]: any; // This allows for additional properties
 };
 

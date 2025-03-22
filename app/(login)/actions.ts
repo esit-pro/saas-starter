@@ -30,6 +30,7 @@ import {
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 import { canGenerateCode } from '@/lib/services/cleanup';
 import { cleanupExpiredCodes } from '@/lib/services/cleanup';
+import { AuthMessageKey } from '@/lib/store/authNotificationStore';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -85,6 +86,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (userWithTeam.length === 0) {
     return {
       error: 'Invalid email or password. Please try again.',
+      messageKey: 'invalid-credentials' as AuthMessageKey,
       email,
       password,
     };
@@ -100,8 +102,27 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (!isPasswordValid) {
     return {
       error: 'Invalid email or password. Please try again.',
+      messageKey: 'invalid-credentials' as AuthMessageKey,
       email,
       password,
+    };
+  }
+
+  // Check if account is locked
+  if (foundUser.lockedUntil && foundUser.lockedUntil > new Date()) {
+    return {
+      error: 'Your account has been locked. Please contact support.',
+      messageKey: 'account-locked' as AuthMessageKey,
+      email,
+    };
+  }
+
+  // Check if email is verified (if email verification is required)
+  if (foundUser.emailVerificationRequired && !foundUser.emailVerified) {
+    return {
+      error: 'Please verify your email address before signing in.',
+      messageKey: 'email-verification' as AuthMessageKey,
+      email,
     };
   }
 
@@ -112,6 +133,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     if (!canGenerate) {
       return {
         error: 'Too many code requests. Please try again later.',
+        messageKey: 'too-many-code-requests' as AuthMessageKey,
         email,
       };
     }
@@ -136,6 +158,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     // Return success but with 2FA required flag
     return {
       requiresTwoFactor: true,
+      messageKey: 'two-factor-required' as AuthMessageKey,
       email,
     };
   }
