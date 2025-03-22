@@ -4,7 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { users, verificationCodes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
-import { canGenerateCode } from '@/lib/services/cleanup';
+import { canGenerateCode, cleanupExpiredCodes } from '@/lib/services/cleanup';
 
 // Schema for resending a 2FA code
 const resendSchema = z.object({
@@ -14,6 +14,9 @@ const resendSchema = z.object({
 // Resend 2FA code endpoint
 export async function POST(request: NextRequest) {
   try {
+    // Clean up expired codes before checking rate limits
+    await cleanupExpiredCodes();
+
     const body = await request.json();
     const parsedBody = resendSchema.safeParse(body);
     

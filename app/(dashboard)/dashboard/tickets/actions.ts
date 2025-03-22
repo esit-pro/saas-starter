@@ -6,6 +6,7 @@ import { serviceTickets, ActivityType, activityLogs, teams, teamMembers, users, 
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import { eq, and, desc, isNull } from 'drizzle-orm';
+import { hasColumn } from '@/lib/utils/audit-trail';
 
 // Log ticket-related activities
 async function logTicketActivity(
@@ -106,21 +107,33 @@ export const createTicket = validatedActionWithUser(
         dueDate
       });
       
+      // Prepare ticket data with guaranteed fields
+      const ticketData: any = {
+        title: data.title,
+        description: data.description || null,
+        clientId: data.clientId,
+        assignedTo: data.assignedTo || null,
+        priority: data.priority,
+        category: data.category || null,
+        dueDate,
+        teamId,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Conditionally add updatedBy if column exists
+      try {
+        if (await hasColumn(serviceTickets, 'updatedBy')) {
+          ticketData.updatedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for updatedBy column:", error);
+      }
+      
       const [newTicket] = await db
         .insert(serviceTickets)
-        .values({
-          title: data.title,
-          description: data.description || null,
-          clientId: data.clientId,
-          assignedTo: data.assignedTo || null,
-          priority: data.priority,
-          category: data.category || null,
-          dueDate,
-          teamId,
-          createdBy: user.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .values(ticketData)
         .returning();
         
       console.log('Ticket created successfully:', newTicket);
@@ -188,20 +201,32 @@ export const updateTicket = validatedActionWithUser(
       // If status is changing to closed, set closedAt
       const closedAt = data.status === 'closed' ? new Date() : existingTicket.closedAt;
 
+      // Prepare update data with guaranteed fields
+      const updateData: any = {
+        title: data.title,
+        description: data.description || null,
+        clientId: data.clientId,
+        assignedTo: data.assignedTo || null,
+        priority: data.priority,
+        category: data.category || null,
+        status: data.status,
+        dueDate,
+        closedAt,
+        updatedAt: new Date(),
+      };
+      
+      // Conditionally add updatedBy if column exists
+      try {
+        if (await hasColumn(serviceTickets, 'updatedBy')) {
+          updateData.updatedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for updatedBy column:", error);
+      }
+
       const [updatedTicket] = await db
         .update(serviceTickets)
-        .set({
-          title: data.title,
-          description: data.description || null,
-          clientId: data.clientId,
-          assignedTo: data.assignedTo || null,
-          priority: data.priority,
-          category: data.category || null,
-          status: data.status,
-          dueDate,
-          closedAt,
-          updatedAt: new Date(),
-        })
+        .set(updateData)
         .where(eq(serviceTickets.id, data.id))
         .returning();
 
@@ -279,12 +304,26 @@ export const deleteTicket = validatedActionWithUser(
 
       // Soft delete the ticket by setting the deletedAt timestamp
       // This preserves all relationships while hiding the ticket from active views
+      const updateData: any = {
+        deletedAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Conditionally add updatedBy and deletedBy if columns exist
+      try {
+        if (await hasColumn(serviceTickets, 'updatedBy')) {
+          updateData.updatedBy = user.id;
+        }
+        if (await hasColumn(serviceTickets, 'deletedBy')) {
+          updateData.deletedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for audit columns:", error);
+      }
+
       const [deletedTicket] = await db
         .update(serviceTickets)
-        .set({
-          deletedAt: new Date(),
-          updatedAt: new Date()
-        })
+        .set(updateData)
         .where(eq(serviceTickets.id, data.id))
         .returning();
 
@@ -504,18 +543,29 @@ export const addTicketComment = validatedActionWithUser(
         return { error: 'Ticket not found or not authorized to comment' };
       }
 
+      // Prepare insert data with guaranteed fields
+      const commentData: any = {
+        ticketId: data.ticketId,
+        teamId,
+        content: data.content,
+        isInternal: data.isInternal,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Conditionally add updatedBy if column exists
+      try {
+        if (await hasColumn(ticketComments, 'updatedBy')) {
+          commentData.updatedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for updatedBy column:", error);
+      }
+
       const [newComment] = await db
         .insert(ticketComments)
-        .values({
-          ticketId: data.ticketId,
-          teamId,
-          content: data.content,
-          isInternal: data.isInternal,
-          createdBy: user.id,
-          updatedBy: user.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .values(commentData)
         .returning();
 
       // Get the user info for the response
@@ -599,22 +649,35 @@ export const logTimeEntry = validatedActionWithUser(
         return { error: 'Client not found or not authorized to log time' };
       }
 
+      // Prepare time entry data with guaranteed fields
+      const timeEntryData: any = {
+        ticketId: data.ticketId || null,
+        clientId: data.clientId,
+        userId: user.id,
+        teamId: teamId,
+        description: data.description,
+        startTime: new Date(data.startTime),
+        duration: data.duration,
+        billable: data.billable,
+        billed: data.billed,
+        billableRate: data.billableRate ? data.billableRate.toString() : null,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Conditionally add updatedBy if column exists
+      try {
+        if (await hasColumn(timeEntries, 'updatedBy')) {
+          timeEntryData.updatedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for updatedBy column:", error);
+      }
+
       const [newTimeEntry] = await db
         .insert(timeEntries)
-        .values({
-          ticketId: data.ticketId || null,
-          clientId: data.clientId,
-          userId: user.id,
-          teamId: teamId,
-          description: data.description,
-          startTime: new Date(data.startTime),
-          duration: data.duration,
-          billable: data.billable,
-          billed: data.billed,
-          billableRate: data.billableRate ? data.billableRate.toString() : null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .values(timeEntryData)
         .returning();
 
       // Get the user info for the response
@@ -675,12 +738,26 @@ export const deleteTimeEntry = validatedActionWithUser(
       }
 
       // Soft delete by setting the deletedAt timestamp
+      const updateData: any = {
+        deletedAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Conditionally add updatedBy and deletedBy if columns exist
+      try {
+        if (await hasColumn(timeEntries, 'updatedBy')) {
+          updateData.updatedBy = user.id;
+        }
+        if (await hasColumn(timeEntries, 'deletedBy')) {
+          updateData.deletedBy = user.id;
+        }
+      } catch (error) {
+        console.error("Error checking for audit columns:", error);
+      }
+
       const [deletedTimeEntry] = await db
         .update(timeEntries)
-        .set({
-          deletedAt: new Date(),
-          updatedAt: new Date()
-        })
+        .set(updateData)
         .where(eq(timeEntries.id, data.id))
         .returning();
 

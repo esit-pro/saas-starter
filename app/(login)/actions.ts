@@ -29,6 +29,7 @@ import {
 } from '@/lib/auth/middleware';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 import { canGenerateCode } from '@/lib/services/cleanup';
+import { cleanupExpiredCodes } from '@/lib/services/cleanup';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -61,6 +62,14 @@ const signInSchema = z.object({
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { email, password } = data;
+
+  // Clean up expired codes before checking rate limits
+  try {
+    await cleanupExpiredCodes();
+  } catch (error) {
+    console.error('Error cleaning up expired codes:', error);
+    // Continue with login even if cleanup fails
+  }
 
   const userWithTeam = await db
     .select({

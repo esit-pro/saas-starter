@@ -75,10 +75,23 @@ export function UserAuthForm({
         // Redirect after successful 2FA
         router.push('/');
       } else {
-        setTwoFactorError(data.error || "Invalid verification code");
+        // Provide more specific error messages based on error type
+        if (data.error === 'Invalid or expired verification code') {
+          setTwoFactorError("Invalid code. Please check and try again.");
+        } else if (data.error === 'Verification code has expired') {
+          setTwoFactorError("Code has expired. Please request a new code.");
+        } else if (data.error === 'Failed to create user session') {
+          setTwoFactorError("Authentication succeeded but we couldn't log you in. Please try again.");
+        } else if (data.error === 'Too many verification attempts. Please try again later.') {
+          setTwoFactorError("Too many failed attempts. Please try again later.");
+        } else {
+          setTwoFactorError(data.error || "Verification failed. Please try again.");
+        }
+        
+        console.error("2FA verification error:", data.error || "Unknown error");
       }
     } catch (error) {
-      setTwoFactorError("Failed to verify code. Please try again.");
+      setTwoFactorError("Network error. Please check your connection and try again.");
       console.error("2FA verification error:", error);
     } finally {
       setVerifyingCode(false);

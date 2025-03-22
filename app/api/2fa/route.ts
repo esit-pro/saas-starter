@@ -5,6 +5,7 @@ import { users, verificationCodes } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { generateVerificationCode, send2FACode } from '@/lib/services/twilio';
 import { setSession } from '@/lib/auth/session';
+import { canAttemptVerification, cleanupExpiredCodes } from '@/lib/services/cleanup';
 
 // Schema for verifying a 2FA code
 const verify2FASchema = z.object({
@@ -20,14 +21,19 @@ const toggle2FASchema = z.object({
 // Verify 2FA code for login
 export async function POST(request: NextRequest) {
   try {
+    // Clean up expired codes first
+    await cleanupExpiredCodes();
+    
     const body = await request.json();
     const parsedBody = verify2FASchema.safeParse(body);
     
     if (!parsedBody.success) {
+      console.log('Invalid request data:', body);
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
     
     const { code, email } = parsedBody.data;
+    console.log(`Verifying 2FA code for email: ${email}`);
     
     // Find the user
     const [user] = await db.select()
@@ -36,7 +42,17 @@ export async function POST(request: NextRequest) {
       .limit(1);
     
     if (!user) {
+      console.log(`User not found for email: ${email}`);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Check rate limiting for verification attempts
+    const canAttempt = await canAttemptVerification(user.id, '2fa_login');
+    if (!canAttempt) {
+      console.log(`Too many verification attempts for user ID: ${user.id}`);
+      return NextResponse.json({ 
+        error: 'Too many verification attempts. Please try again later.' 
+      }, { status: 429 });
     }
     
     // Find the verification code
@@ -53,11 +69,13 @@ export async function POST(request: NextRequest) {
       .limit(1);
     
     if (!verificationCode) {
+      console.log(`Invalid or missing verification code for user ID: ${user.id}, code: ${code}`);
       return NextResponse.json({ error: 'Invalid or expired verification code' }, { status: 400 });
     }
     
     // Check if the code is expired
     if (new Date(verificationCode.expiresAt) < new Date()) {
+      console.log(`Verification code expired for user ID: ${user.id}, code: ${code}`);
       return NextResponse.json({ error: 'Verification code has expired' }, { status: 400 });
     }
     
@@ -67,7 +85,19 @@ export async function POST(request: NextRequest) {
       .where(eq(verificationCodes.id, verificationCode.id));
     
     // Create session for the user
-    await setSession(user);
+    try {
+      // Make sure we have a valid user object with ID
+      if (!user || typeof user.id !== 'number') {
+        console.error('Invalid user object for session creation:', user);
+        return NextResponse.json({ error: 'Invalid user data' }, { status: 500 });
+      }
+      
+      await setSession(user);
+      console.log(`Successfully created session for user ID: ${user.id}`);
+    } catch (sessionError) {
+      console.error('Error creating user session:', sessionError);
+      return NextResponse.json({ error: 'Failed to create user session' }, { status: 500 });
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

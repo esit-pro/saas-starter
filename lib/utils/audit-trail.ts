@@ -3,6 +3,45 @@ import { eq } from 'drizzle-orm';
 import { ActivityType } from '@/lib/db/schema';
 import { logActivity } from '@/lib/utils/activity-logger';
 
+// Cache to store which columns exist in each table
+const tableColumnsMap = new Map<any, Set<string>>();
+
+/**
+ * Check if a column exists in a table by examining a sample row
+ * @param table The database table
+ * @param columnName The column name to check
+ */
+export async function hasColumn(table: any, columnName: string): Promise<boolean> {
+  // Get the table name
+  const tableName = table._.name;
+  
+  // Check if we've already cached the column structure
+  if (tableColumnsMap.has(tableName)) {
+    return tableColumnsMap.get(tableName)!.has(columnName);
+  }
+  
+  try {
+    // Get a sample row to examine the column structure
+    const [sampleRow] = await db.select().from(table).limit(1);
+    
+    // If no rows exist, we can't determine columns this way
+    if (!sampleRow) {
+      // Default to true for safety in this case
+      return true;
+    }
+    
+    // Cache all column names for this table
+    const columns = new Set(Object.keys(sampleRow));
+    tableColumnsMap.set(tableName, columns);
+    
+    return columns.has(columnName);
+  } catch (error) {
+    console.error(`Error checking if column ${columnName} exists in table ${tableName}:`, error);
+    // Default to false on error
+    return false;
+  }
+}
+
 /**
  * Create entity with audit trail
  * @param table The database table
@@ -18,15 +57,19 @@ export async function createWithAudit<T extends Record<string, any>>(
   teamId: number,
   entityType: string
 ) {
-  // Add audit fields
-  const entityData = {
+  // Base entity data with guaranteed fields
+  const entityData: Record<string, any> = {
     ...data,
     teamId,
     createdBy: userId,
-    updatedBy: userId,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+
+  // Only add updatedBy if it exists in the table schema
+  if (await hasColumn(table, 'updatedBy')) {
+    entityData.updatedBy = userId;
+  }
 
   // Insert and return the created entity
   const [createdEntity] = await db.insert(table).values(entityData).returning();
@@ -65,12 +108,16 @@ export async function updateWithAudit<T extends Record<string, any>>(
     throw new Error(`${entityType} not found with ID ${id}`);
   }
   
-  // Add audit fields
-  const updateData = {
+  // Base update data with guaranteed fields
+  const updateData: Record<string, any> = {
     ...data,
-    updatedBy: userId,
     updatedAt: new Date(),
   };
+  
+  // Only add updatedBy if it exists in the table schema
+  if (await hasColumn(table, 'updatedBy')) {
+    updateData.updatedBy = userId;
+  }
   
   // Update and return the entity
   const [updatedEntity] = await db
@@ -111,15 +158,26 @@ export async function softDeleteWithAudit(
     throw new Error(`${entityType} not found with ID ${id}`);
   }
   
-  // Soft delete by setting deletedAt timestamp and deletedBy user
+  // Base delete data with guaranteed fields
+  const deleteData: Record<string, any> = {
+    deletedAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  // Only add deletedBy if it exists in the table schema
+  if (await hasColumn(table, 'deletedBy')) {
+    deleteData.deletedBy = userId;
+  }
+  
+  // Only add updatedBy if it exists in the table schema
+  if (await hasColumn(table, 'updatedBy')) {
+    deleteData.updatedBy = userId;
+  }
+  
+  // Soft delete by setting timestamps
   const [deletedEntity] = await db
     .update(table)
-    .set({
-      deletedAt: new Date(),
-      deletedBy: userId,
-      updatedAt: new Date(),
-      updatedBy: userId,
-    })
+    .set(deleteData)
     .where(eq(table.id, id))
     .returning();
   

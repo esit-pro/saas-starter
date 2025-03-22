@@ -13,6 +13,7 @@ import {
 } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { hasColumn } from '@/lib/utils/audit-trail';
 
 export async function getUser() {
   const sessionCookie = (await cookies()).get('session');
@@ -368,13 +369,28 @@ export async function updateServiceTicket(
     .returning();
 }
 
-export async function deleteServiceTicket(ticketId: number) {
+export async function deleteServiceTicket(ticketId: number, userId?: number) {
+  // Basic update fields that are guaranteed to exist
+  const updateData: any = {
+    deletedAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  // Only set deletedBy if userId is provided and the column exists
+  if (userId) {
+    try {
+      // Use the hasColumn function for more robust checking
+      if (await hasColumn(serviceTickets, 'deletedBy')) {
+        updateData.deletedBy = userId;
+      }
+    } catch (error) {
+      console.error("Error checking for deletedBy column:", error);
+    }
+  }
+  
   return await db
     .update(serviceTickets)
-    .set({
-      deletedAt: new Date(),
-      updatedAt: new Date()
-    })
+    .set(updateData)
     .where(eq(serviceTickets.id, ticketId))
     .returning();
 }
